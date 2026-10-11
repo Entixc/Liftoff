@@ -12,7 +12,7 @@
 
 ## Текущий статус
 
-Готова базовая инфраструктура backend: health-check, подключение к PostgreSQL, миграция таблицы `users`, фабрика SQLAlchemy-сессий и `POST /auth/register`. Регистрация валидирует входные данные, хеширует пароль, отклоняет повторный никнейм и возвращает только публичные данные пользователя. Сценарий покрыт интеграционными тестами.
+Готова базовая инфраструктура backend: health-check, подключение к PostgreSQL, миграция таблицы `users`, фабрика SQLAlchemy-сессий, регистрация, вход и защищённый профиль. `POST /auth/register` создаёт пользователя, `POST /auth/login` возвращает JWT access token, а `GET /auth/me` возвращает профиль владельца валидного Bearer-токена. Критичные сценарии покрыты интеграционными тестами.
 
 ## Локальный запуск без Docker
 
@@ -22,11 +22,12 @@
 cd /d/liftoff/backend
 source ../.venv/Scripts/activate
 export DATABASE_URL='postgresql+psycopg://workout_tracker:ПАРОЛЬ@localhost:5432/workout_tracker'
+export JWT_SECRET_KEY='СЮДА_СЛУЧАЙНЫЙ_СЕКРЕТ_НЕ_МЕНЕЕ_32_СИМВОЛОВ'
 python -m alembic upgrade head
 python -m app.main
 ```
 
-Если в пароле есть специальные символы, их нужно URL-кодировать: например, `@` заменяется на `%40`. Не сохраняйте `DATABASE_URL` с паролем в файлах, которые попадут в Git.
+Если в пароле есть специальные символы, их нужно URL-кодировать: например, `@` заменяется на `%40`. Создать секрет для JWT можно командой `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Не сохраняйте `DATABASE_URL` или `JWT_SECRET_KEY` в файлах, которые попадут в Git.
 
 В другом терминале запустите frontend:
 
@@ -44,5 +45,6 @@ Frontend обычно доступен по адресу `http://localhost:5173`
 cd /d/liftoff/backend
 source ../.venv/Scripts/activate
 export DATABASE_URL='postgresql+psycopg://workout_tracker:ПАРОЛЬ@localhost:5432/workout_tracker'
+export JWT_SECRET_KEY='СЮДА_СЛУЧАЙНЫЙ_СЕКРЕТ_НЕ_МЕНЕЕ_32_СИМВОЛОВ'
 python -m pytest tests
 ```
