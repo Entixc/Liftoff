@@ -5,7 +5,11 @@ import pytest
 from pydantic import ValidationError
 
 from app.models.user import User
-from app.schemas.auth import RegisterRequest, UserResponse
+from app.schemas.auth import (
+    RegisterRequest,
+    UpdateProfileRequest,
+    UserResponse,
+)
 
 
 def test_register_request_accepts_valid_data() -> None:
@@ -49,3 +53,32 @@ def test_user_response_excludes_password_hash() -> None:
     assert response.id == 1
     assert response.nickname == "nurzhan"
     assert "password_hash" not in response.model_dump()
+
+
+def test_update_profile_request_accepts_height_only() -> None:
+    request = UpdateProfileRequest(height_cm=180)
+
+    assert request.height_cm == 180
+    assert request.body_weight_kg is None
+
+
+def test_update_profile_request_accepts_weight_only() -> None:
+    request = UpdateProfileRequest(body_weight_kg=Decimal("75.5"))
+
+    assert request.height_cm is None
+    assert request.body_weight_kg == Decimal("75.5")
+
+
+def test_update_profile_request_rejects_zero_height() -> None:
+    with pytest.raises(ValidationError):
+        UpdateProfileRequest(height_cm=0)
+
+
+def test_update_profile_request_rejects_negative_weight() -> None:
+    with pytest.raises(ValidationError):
+        UpdateProfileRequest(body_weight_kg=Decimal("-75.5"))
+
+
+def test_update_profile_request_rejects_weight_with_three_decimals() -> None:
+    with pytest.raises(ValidationError):
+        UpdateProfileRequest(body_weight_kg=Decimal("75.555"))

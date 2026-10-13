@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import jwt
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -90,3 +92,77 @@ def test_login_user_rejects_invalid_credentials(client: TestClient) -> None:
         "detail": "Invalid nickname or password"
     }
     assert unknown_nickname_response.json() == wrong_password_response.json()
+
+
+def test_update_my_profile_updates_only_provided_fields(
+    client: TestClient,
+) -> None:
+    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    client.post("/auth/register", json=credentials)
+    login_response = client.post("/auth/login", json=credentials)
+    headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+
+    height_response = client.patch(
+        "/auth/me",
+        json={"height_cm": 180},
+        headers=headers,
+    )
+    weight_response = client.patch(
+        "/auth/me",
+        json={"body_weight_kg": "75.5"},
+        headers=headers,
+    )
+
+    assert height_response.status_code == 200
+    assert height_response.json()["height_cm"] == 180
+    assert height_response.json()["body_weight_kg"] is None
+    assert weight_response.status_code == 200
+    assert weight_response.json()["height_cm"] == 180
+    assert Decimal(weight_response.json()["body_weight_kg"]) == Decimal("75.5")
+
+
+def test_update_my_profile_clears_explicit_null_field(
+    client: TestClient,
+) -> None:
+    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    client.post("/auth/register", json=credentials)
+    login_response = client.post("/auth/login", json=credentials)
+    headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+    client.patch(
+        "/auth/me",
+        json={"height_cm": 180, "body_weight_kg": "75.5"},
+        headers=headers,
+    )
+
+    response = client.patch(
+        "/auth/me",
+        json={"height_cm": None},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["height_cm"] is None
+    assert Decimal(response.json()["body_weight_kg"]) == Decimal("75.5")
+
+
+def test_update_my_profile_rejects_empty_request(client: TestClient) -> None:
+    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    client.post("/auth/register", json=credentials)
+    login_response = client.post("/auth/login", json=credentials)
+
+    response = client.patch(
+        "/auth/me",
+        json={},
+        headers={
+            "Authorization": f"Bearer {login_response.json()['access_token']}"
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "At least one profile field must be provided"
+    }

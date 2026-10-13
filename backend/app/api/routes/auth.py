@@ -13,6 +13,7 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 
@@ -27,6 +28,26 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 @router.get("/me", response_model=UserResponse)
 def get_my_profile(current_user: CurrentUser) -> User:
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_my_profile(
+    request: UpdateProfileRequest,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> User:
+    if not request.model_fields_set:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="At least one profile field must be provided",
+        )
+
+    for field_name in request.model_fields_set:
+        setattr(current_user, field_name, getattr(request, field_name))
+
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

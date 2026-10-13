@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,3 +28,11 @@ class UserResponse(BaseModel):
     height_cm: int | None
     body_weight_kg: Decimal | None
     created_at: datetime
+
+
+class UpdateProfileRequest(BaseModel):
+    height_cm: Annotated[int | None, Field(gt=0)] = None
+    body_weight_kg: Annotated[
+        Decimal | None,
+        Field(gt=0, lt=1000, decimal_places=2),
+    ] = None
