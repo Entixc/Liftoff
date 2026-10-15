@@ -5,6 +5,11 @@ export type LoginPayload = {
   password: string;
 };
 
+export type RegisterPayload = {
+  nickname: string;
+  password: string;
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type: "bearer";
@@ -39,6 +44,24 @@ export async function login(
   }
 
   return response.json() as Promise<TokenResponse>;
+}
+
+export async function register(
+  payload: RegisterPayload,
+): Promise<UserProfile> {
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Не удалось зарегистрироваться");
+  }
+
+  return response.json() as Promise<UserProfile>;
 }
 
 export async function getMyProfile(token: string): Promise<UserProfile> {

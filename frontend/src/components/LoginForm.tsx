@@ -4,10 +4,16 @@ import { login, type TokenResponse } from "../api/auth";
 
 type LoginFormProps = {
   onLogin: (tokenResponse: TokenResponse) => void;
+  onShowRegistration: () => void;
+  initialNickname?: string;
 };
 
-export function LoginForm({ onLogin }: LoginFormProps) {
-  const [nickname, setNickname] = useState("");
+export function LoginForm({
+  onLogin,
+  onShowRegistration,
+  initialNickname = "",
+}: LoginFormProps) {
+  const [nickname, setNickname] = useState(initialNickname);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +61,10 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Входим..." : "Войти"}
+      </button>
+
+      <button type="button" onClick={onShowRegistration}>
+        Создать аккаунт
       </button>
     </form>
   );

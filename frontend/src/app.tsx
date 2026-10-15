@@ -7,6 +7,9 @@ import {
 } from "./api/auth";
 import { LoginForm } from "./components/LoginForm";
 import { ProfileForm } from "./components/ProfileForm";
+import { RegisterForm } from "./components/RegisterForm";
+
+type AuthMode = "login" | "register";
 
 export function App() {
   const [token, setToken] = useState(() =>
@@ -15,6 +18,9 @@ export function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [registeredNickname, setRegisteredNickname] = useState("");
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -53,13 +59,46 @@ export function App() {
     setToken(null);
   }
 
+  function showRegistration() {
+    setAuthMessage(null);
+    setAuthMode("register");
+  }
+
+  function showLogin() {
+    setAuthMessage(null);
+    setAuthMode("login");
+  }
+
+  function handleRegistered(nickname: string) {
+    setRegisteredNickname(nickname);
+    setAuthMode("login");
+    setAuthMessage("Аккаунт создан. Теперь войди.");
+  }
+
   return (
     <main>
       <h1>Workout Tracker</h1>
 
       {profileError && <p>{profileError}</p>}
 
-      {!token && <LoginForm onLogin={handleLogin} />}
+      {!token && (
+        <section>
+          {authMessage && <p>{authMessage}</p>}
+
+          {authMode === "login" ? (
+            <LoginForm
+              onLogin={handleLogin}
+              onShowRegistration={showRegistration}
+              initialNickname={registeredNickname}
+            />
+          ) : (
+            <RegisterForm
+              onRegistered={handleRegistered}
+              onShowLogin={showLogin}
+            />
+          )}
+        </section>
+      )}
 
       {token && isLoadingProfile && <p>Загружаем профиль...</p>}
 
