@@ -6,6 +6,7 @@ import {
   type UserProfile,
 } from "./api/auth";
 import { LoginForm } from "./components/LoginForm";
+import { ProfileForm } from "./components/ProfileForm";
 
 export function App() {
   const [token, setToken] = useState(() =>
@@ -62,11 +63,16 @@ export function App() {
 
       {token && isLoadingProfile && <p>Загружаем профиль...</p>}
 
-      {profile && (
+      {token && profile && (
         <section>
           <h2>Привет, {profile.nickname}!</h2>
           <p>Рост: {profile.height_cm ?? "не указан"}</p>
           <p>Вес: {profile.body_weight_kg ?? "не указан"}</p>
+          <ProfileForm
+            profile={profile}
+            token={token}
+            onProfileUpdated={setProfile}
+          />
           <button type="button" onClick={handleLogout}>
             Выйти
           </button>

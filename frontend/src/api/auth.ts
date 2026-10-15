@@ -18,6 +18,11 @@ export type UserProfile = {
   created_at: string;
 };
 
+export type UpdateProfilePayload = {
+  height_cm?: number | null;
+  body_weight_kg?: number | null;
+};
+
 export async function login(
   payload: LoginPayload,
 ): Promise<TokenResponse> {
@@ -45,6 +50,26 @@ export async function getMyProfile(token: string): Promise<UserProfile> {
 
   if (!response.ok) {
     throw new Error("Не удалось загрузить профиль");
+  }
+
+  return response.json() as Promise<UserProfile>;
+}
+
+export async function updateMyProfile(
+  token: string,
+  payload: UpdateProfilePayload,
+): Promise<UserProfile> {
+  const response = await fetch(`${API_URL}/auth/me`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Не удалось обновить профиль");
   }
 
   return response.json() as Promise<UserProfile>;
