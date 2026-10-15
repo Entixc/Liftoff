@@ -5,6 +5,8 @@ import {
   type TokenResponse,
   type UserProfile,
 } from "./api/auth";
+import { getExercises, type Exercise } from "./api/exercises";
+import { ExerciseCatalog } from "./components/ExerciseCatalog";
 import { LoginForm } from "./components/LoginForm";
 import { ProfileForm } from "./components/ProfileForm";
 import { RegisterForm } from "./components/RegisterForm";
@@ -21,6 +23,9 @@ export function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registeredNickname, setRegisteredNickname] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isLoadingExercises, setIsLoadingExercises] = useState(false);
+  const [exercisesError, setExercisesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -48,6 +53,24 @@ export function App() {
 
     void loadProfile();
   }, [token]);
+
+  useEffect(() => {
+    async function loadExercises() {
+      setIsLoadingExercises(true);
+      setExercisesError(null);
+
+      try {
+        const loadedExercises = await getExercises();
+        setExercises(loadedExercises);
+      } catch {
+        setExercisesError("Не удалось загрузить каталог упражнений.");
+      } finally {
+        setIsLoadingExercises(false);
+      }
+    }
+
+    void loadExercises();
+  }, []);
 
   function handleLogin(tokenResponse: TokenResponse) {
     localStorage.setItem("access_token", tokenResponse.access_token);
@@ -115,6 +138,12 @@ export function App() {
           <button type="button" onClick={handleLogout}>
             Выйти
           </button>
+
+          {isLoadingExercises && <p>Загружаем каталог упражнений...</p>}
+          {exercisesError && <p>{exercisesError}</p>}
+          {exercises.length > 0 && (
+            <ExerciseCatalog exercises={exercises} />
+          )}
         </section>
       )}
     </main>
