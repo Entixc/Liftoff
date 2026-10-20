@@ -1,13 +1,13 @@
-import os
-
 from collections.abc import Generator
 
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import get_database_url
 
-database_url = os.environ["DATABASE_URL"]
+
+database_url = get_database_url()
 
 engine = create_engine(database_url)
 
@@ -23,4 +23,3 @@ def get_db():
         yield db
     finally:
         db.close()
-        

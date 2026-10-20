@@ -1,4 +1,3 @@
-import os
 from typing import Annotated
 
 import jwt
@@ -6,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.core.security import JWT_ALGORITHM
+from app.core.security import JWT_ALGORITHM, JWT_SECRET_KEY
 from app.db.session import get_db
 from app.models.user import User
 
@@ -29,7 +28,7 @@ def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            os.environ["JWT_SECRET_KEY"],
+            JWT_SECRET_KEY,
             algorithms=[JWT_ALGORITHM],
         )
         user_id = int(payload["sub"])

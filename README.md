@@ -8,43 +8,90 @@
 
 - Backend: Python, FastAPI, SQLAlchemy, Alembic, PostgreSQL
 - Frontend: React, TypeScript, Vite
-- Инфраструктура: Docker Compose и GitHub Actions
+- Инфраструктура: Docker Compose
 
 ## Текущий статус
 
-Готовы регистрация, вход, защищённый профиль, начальный каталог упражнений и основной цикл тренировки. Защищённые маршруты создают и восстанавливают активную тренировку, добавляют упражнения, управляют подходами, завершают тренировку и возвращают историю пользователя. Frontend сохраняет токен, позволяет редактировать профиль, вести тренировку с таймером, управлять упражнениями и подходами, завершить тренировку и увидеть её дату и длительность в истории. Критичные backend-сценарии покрыты интеграционными тестами.
+Готовы регистрация, вход, защищённый профиль, начальный каталог упражнений и полный цикл тренировки. Пользователь может вести активную тренировку, управлять упражнениями и подходами, завершить её, открыть в истории и отредактировать. Критичные backend-сценарии покрыты интеграционными тестами.
+
+## Конфигурация
+
+Скопируйте шаблон окружения, замените значения `CHANGE_ME` и укажите собственный `JWT_SECRET_KEY`:
+
+```bash
+cd /d/liftoff
+cp .env.example .env
+```
+
+Для JWT создайте случайный секрет:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Настоящий `.env` игнорируется Git и не должен попадать в репозиторий. Если пароль PostgreSQL содержит специальные символы, в URL подключения их нужно кодировать: например, `@` заменяется на `%40`.
 
 ## Локальный запуск без Docker
 
-Для backend нужны Python, PostgreSQL и переменная окружения `DATABASE_URL`.
+Для backend нужны Python 3.14 и запущенный PostgreSQL. В Git Bash загрузите переменные из созданного `.env` и запустите приложение:
 
 ```bash
-cd /d/liftoff/backend
-source ../.venv/Scripts/activate
-export DATABASE_URL='postgresql+psycopg://workout_tracker:ПАРОЛЬ@localhost:5432/workout_tracker'
-export JWT_SECRET_KEY='СЮДА_СЛУЧАЙНЫЙ_СЕКРЕТ_НЕ_МЕНЕЕ_32_СИМВОЛОВ'
+cd /d/liftoff
+set -a
+source .env
+set +a
+
+source .venv/Scripts/activate
+cd backend
+python -m pip install -r requirements.txt
 python -m alembic upgrade head
+python -m app.scripts.seed_exercises
 python -m app.main
 ```
 
-Если в пароле есть специальные символы, их нужно URL-кодировать: например, `@` заменяется на `%40`. Создать секрет для JWT можно командой `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Не сохраняйте `DATABASE_URL` или `JWT_SECRET_KEY` в файлах, которые попадут в Git.
-
-В другом терминале запустите frontend:
+В другом Git Bash терминале загрузите то же окружение и запустите frontend:
 
 ```bash
-cd /d/liftoff/frontend
+cd /d/liftoff
+set -a
+source .env
+set +a
+
+cd frontend
 npm install
 npm run dev
 ```
 
 Frontend обычно доступен по адресу `http://localhost:5173`, backend — по адресу `http://localhost:8000`, а документация API — `http://localhost:8000/docs`.
 
-## Проверка backend
+## Запуск через Docker Compose
+
+После создания `.env` убедитесь, что `POSTGRES_PASSWORD` совпадает с паролем внутри `DOCKER_DATABASE_URL`, а адрес базы в этом URL использует хост `db`. Затем выполните:
 
 ```bash
-cd /d/liftoff/backend
-source ../.venv/Scripts/activate
-export DATABASE_URL='postgresql+psycopg://workout_tracker:ПАРОЛЬ@localhost:5432/workout_tracker'
-export JWT_SECRET_KEY='СЮДА_СЛУЧАЙНЫЙ_СЕКРЕТ_НЕ_МЕНЕЕ_32_СИМВОЛОВ'
+docker compose up --build
+```
+
+Compose поднимет PostgreSQL, применит миграции, заполнит каталог упражнений и запустит backend и frontend.
+
+## Проверка проекта
+
+Backend:
+
+```bash
+cd /d/liftoff
+set -a
+source .env
+set +a
+
+source .venv/Scripts/activate
+cd backend
 python -m pytest tests
+```
+
+Frontend:
+
+```bash
+cd /d/liftoff/frontend
+npm run build
 ```

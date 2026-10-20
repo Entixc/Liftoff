@@ -1,13 +1,15 @@
-import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
 from pwdlib import PasswordHash
 
+from app.core.config import get_jwt_secret_key
+
 
 password_hasher = PasswordHash.recommended()
 
 JWT_ALGORITHM = "HS256"
+JWT_SECRET_KEY = get_jwt_secret_key()
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
@@ -26,7 +28,7 @@ def create_access_token(user_id: int) -> str:
     payload = {"sub": str(user_id), "exp": expires_at}
     return jwt.encode(
         payload,
-        os.environ["JWT_SECRET_KEY"],
+        JWT_SECRET_KEY,
         algorithm=JWT_ALGORITHM,
     )
 
