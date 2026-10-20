@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -10,6 +10,7 @@ from app.models.user import User
 from app.models.workout import Workout
 from app.models.exercise import Exercise
 from app.models.workout_exercise import WorkoutExercise
+from app.models.workout_set import WorkoutSet
 from app.schemas.workout import (
     AddWorkoutExerciseRequest,
     WorkoutExerciseResponse,
@@ -164,3 +165,39 @@ def list_workout_exercises(
             .order_by(WorkoutExercise.position)
         ).all()
     )
+
+
+@router.delete(
+    "/{workout_id}/exercises/{workout_exercise_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_workout_exercise(
+    workout_id: int,
+    workout_exercise_id: int,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> Response:
+    workout_exercise = db.scalar(
+        select(WorkoutExercise)
+        .join(Workout, WorkoutExercise.workout_id == Workout.id)
+        .where(
+            WorkoutExercise.id == workout_exercise_id,
+            WorkoutExercise.workout_id == workout_id,
+            Workout.user_id == current_user.id,
+            Workout.status == "active",
+        )
+    )
+    if workout_exercise is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout exercise not found",
+        )
+
+    db.execute(
+        delete(WorkoutSet).where(
+            WorkoutSet.workout_exercise_id == workout_exercise.id,
+        )
+    )
+    db.delete(workout_exercise)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

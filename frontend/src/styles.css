@@ -106,6 +106,12 @@ button:disabled {
   font-weight: 700;
 }
 
+.exercise-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .set-list {
   display: grid;
   gap: 10px;

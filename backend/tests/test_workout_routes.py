@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.exercise import Exercise
 from app.models.workout import Workout
 from app.models.workout_exercise import WorkoutExercise
+from app.models.workout_set import WorkoutSet
 
 
 def get_auth_headers(
@@ -252,3 +253,58 @@ def test_list_workout_exercises_rejects_another_users_workout(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Workout not found"}
+
+
+def test_delete_workout_exercise_removes_its_sets(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    headers = get_auth_headers(client)
+    workout_response = client.post("/workouts", headers=headers)
+    exercise = create_exercise(db_session, "Barbell Bench Press")
+    workout_id = workout_response.json()["id"]
+    workout_exercise_response = client.post(
+        f"/workouts/{workout_id}/exercises",
+        json={"exercise_id": exercise.id},
+        headers=headers,
+    )
+    workout_exercise_id = workout_exercise_response.json()["id"]
+    set_response = client.post(
+        f"/workouts/{workout_id}/exercises/{workout_exercise_id}/sets",
+        json={"weight_kg": "60", "repetitions": 10},
+        headers=headers,
+    )
+
+    response = client.delete(
+        f"/workouts/{workout_id}/exercises/{workout_exercise_id}",
+        headers=headers,
+    )
+
+    assert response.status_code == 204
+    assert db_session.get(WorkoutExercise, workout_exercise_id) is None
+    assert db_session.get(WorkoutSet, set_response.json()["id"]) is None
+
+
+def test_delete_workout_exercise_rejects_another_users_workout(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    owner_headers = get_auth_headers(client, nickname="owner")
+    workout_response = client.post("/workouts", headers=owner_headers)
+    exercise = create_exercise(db_session, "Barbell Bench Press")
+    workout_exercise_response = client.post(
+        f"/workouts/{workout_response.json()['id']}/exercises",
+        json={"exercise_id": exercise.id},
+        headers=owner_headers,
+    )
+    another_user_headers = get_auth_headers(client, nickname="another-user")
+
+    response = client.delete(
+        "/workouts/"
+        f"{workout_response.json()['id']}/exercises/"
+        f"{workout_exercise_response.json()['id']}",
+        headers=another_user_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Workout exercise not found"}

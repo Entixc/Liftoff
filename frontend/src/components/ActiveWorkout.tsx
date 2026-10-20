@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { Exercise } from "../api/exercises";
 import {
   addExerciseToWorkout,
+  deleteExerciseFromWorkout,
   getWorkoutExercises,
   startWorkout,
   type Workout,
@@ -136,6 +137,17 @@ export function ActiveWorkout({
     }
   }
 
+  async function handleDeleteExercise(workoutExerciseId: number) {
+    if (workout === null) {
+      return;
+    }
+
+    await deleteExerciseFromWorkout(token, workout.id, workoutExerciseId);
+    setWorkoutExercises((currentExercises) =>
+      currentExercises.filter((item) => item.id !== workoutExerciseId),
+    );
+  }
+
   const addedExerciseIds = new Set(
     workoutExercises.map((item) => item.exercise_id),
   );
@@ -176,6 +188,7 @@ export function ActiveWorkout({
                     token={token}
                     workoutId={workout.id}
                     workoutExercise={item}
+                    onDeleteExercise={handleDeleteExercise}
                   />
                 );
               })}

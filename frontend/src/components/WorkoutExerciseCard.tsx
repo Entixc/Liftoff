@@ -16,6 +16,7 @@ type WorkoutExerciseCardProps = {
   token: string;
   workoutId: number;
   workoutExercise: WorkoutExercise;
+  onDeleteExercise: (workoutExerciseId: number) => Promise<void>;
 };
 
 type WorkoutSetRowProps = {
@@ -154,12 +155,14 @@ export function WorkoutExerciseCard({
   token,
   workoutId,
   workoutExercise,
+  onDeleteExercise,
 }: WorkoutExerciseCardProps) {
   const [workoutSets, setWorkoutSets] = useState<WorkoutSet[]>([]);
   const [weight, setWeight] = useState("");
   const [repetitions, setRepetitions] = useState("10");
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isDeletingExercise, setIsDeletingExercise] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -252,6 +255,21 @@ export function WorkoutExerciseCard({
     );
   }
 
+  async function handleDeleteExercise() {
+    if (!window.confirm("Удалить упражнение и все его подходы?")) {
+      return;
+    }
+
+    setIsDeletingExercise(true);
+    setError(null);
+    try {
+      await onDeleteExercise(workoutExercise.id);
+    } catch {
+      setError("Не удалось удалить упражнение.");
+      setIsDeletingExercise(false);
+    }
+  }
+
   const isBodyweight = exercise?.is_bodyweight ?? false;
 
   return (
@@ -261,7 +279,17 @@ export function WorkoutExerciseCard({
           <small>Упражнение {workoutExercise.position}</small>
           <h3>{exercise?.name ?? `Упражнение #${workoutExercise.exercise_id}`}</h3>
         </div>
-        {isBodyweight && <span className="exercise-badge">Свой вес</span>}
+        <div className="exercise-heading-actions">
+          {isBodyweight && <span className="exercise-badge">Свой вес</span>}
+          <button
+            type="button"
+            className="danger-button"
+            onClick={handleDeleteExercise}
+            disabled={isDeletingExercise}
+          >
+            {isDeletingExercise ? "Удаляем..." : "Удалить упражнение"}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

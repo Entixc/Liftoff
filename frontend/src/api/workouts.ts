@@ -106,6 +106,26 @@ export async function addExerciseToWorkout(
   return response.json() as Promise<WorkoutExercise>;
 }
 
+export async function deleteExerciseFromWorkout(
+  token: string,
+  workoutId: number,
+  workoutExerciseId: number,
+): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/workouts/${workoutId}/exercises/${workoutExerciseId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Не удалось удалить упражнение");
+  }
+}
+
 function setsUrl(workoutId: number, workoutExerciseId: number): string {
   return `${API_URL}/workouts/${workoutId}/exercises/${workoutExerciseId}/sets`;
 }
