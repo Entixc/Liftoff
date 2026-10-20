@@ -392,3 +392,40 @@ def test_complete_workout_rejects_another_users_workout(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Workout not found"}
+
+
+def test_completed_workout_exercises_and_sets_remain_readable(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    exercise = create_exercise(db_session, "Barbell Bench Press")
+    workout_exercise = client.post(
+        f"/workouts/{workout['id']}/exercises",
+        json={"exercise_id": exercise.id},
+        headers=headers,
+    ).json()
+    workout_set = client.post(
+        f"/workouts/{workout['id']}/exercises/{workout_exercise['id']}/sets",
+        json={"weight_kg": "60", "repetitions": 10},
+        headers=headers,
+    ).json()
+    client.post(
+        f"/workouts/{workout['id']}/complete",
+        headers=headers,
+    )
+
+    exercises_response = client.get(
+        f"/workouts/{workout['id']}/exercises",
+        headers=headers,
+    )
+    sets_response = client.get(
+        f"/workouts/{workout['id']}/exercises/{workout_exercise['id']}/sets",
+        headers=headers,
+    )
+
+    assert exercises_response.status_code == 200
+    assert exercises_response.json()[0]["id"] == workout_exercise["id"]
+    assert sets_response.status_code == 200
+    assert sets_response.json()[0]["id"] == workout_set["id"]

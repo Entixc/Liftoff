@@ -184,6 +184,7 @@ export function App() {
             />
           )}
           <WorkoutHistory
+            exercises={exercises}
             token={token}
             refreshVersion={historyVersion}
           />

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 
+import type { Exercise } from "../api/exercises";
 import { getWorkoutHistory, type Workout } from "../api/workouts";
+import { WorkoutHistoryDetails } from "./WorkoutHistoryDetails";
 
 type WorkoutHistoryProps = {
+  exercises: Exercise[];
   refreshVersion: number;
   token: string;
 };
@@ -36,10 +39,12 @@ function formatDate(value: string): string {
 }
 
 export function WorkoutHistory({
+  exercises,
   refreshVersion,
   token,
 }: WorkoutHistoryProps) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,10 +93,27 @@ export function WorkoutHistory({
                 <strong>{formatDate(workout.started_at)}</strong>
                 <span>Тренировка #{workout.id}</span>
               </div>
-              <span>{formatDuration(workout)}</span>
+              <div className="history-actions">
+                <span>{formatDuration(workout)}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkout(workout)}
+                >
+                  Открыть
+                </button>
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {selectedWorkout && (
+        <WorkoutHistoryDetails
+          workout={selectedWorkout}
+          exercises={exercises}
+          token={token}
+          onClose={() => setSelectedWorkout(null)}
+        />
       )}
     </section>
   );
