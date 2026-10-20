@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
 class WorkoutResponse(BaseModel):
@@ -13,6 +13,12 @@ class WorkoutResponse(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     status: str
+
+
+class UpdateWorkoutTimeRequest(BaseModel):
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+
 
 class AddWorkoutExerciseRequest(BaseModel):
     exercise_id: Annotated[int, Field(gt=0)]

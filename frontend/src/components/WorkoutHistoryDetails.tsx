@@ -6,6 +6,7 @@ import {
   deleteExerciseFromWorkout,
   getWorkoutExercises,
   getWorkoutSets,
+  updateWorkoutTime,
   type Workout,
   type WorkoutExercise,
   type WorkoutSet,
@@ -17,6 +18,7 @@ type WorkoutHistoryDetailsProps = {
   token: string;
   workout: Workout;
   onClose: () => void;
+  onWorkoutUpdated: (workout: Workout) => void;
 };
 
 type ExerciseDetails = {
@@ -24,11 +26,31 @@ type ExerciseDetails = {
   sets: WorkoutSet[];
 };
 
+function toDateTimeLocal(value: string | null): string {
+  if (value === null) {
+    return "";
+  }
+
+  const date = new Date(value);
+  const localTime = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  );
+  return localTime.toISOString().slice(0, 16);
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function WorkoutHistoryDetails({
   exercises,
   token,
   workout,
   onClose,
+  onWorkoutUpdated,
 }: WorkoutHistoryDetailsProps) {
   const [details, setDetails] = useState<ExerciseDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +60,19 @@ export function WorkoutHistoryDetails({
   const [reloadVersion, setReloadVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState(() =>
+    toDateTimeLocal(workout.started_at),
+  );
+  const [finishedAt, setFinishedAt] = useState(() =>
+    toDateTimeLocal(workout.finished_at),
+  );
+  const [isSavingTime, setIsSavingTime] = useState(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStartedAt(toDateTimeLocal(workout.started_at));
+    setFinishedAt(toDateTimeLocal(workout.finished_at));
+  }, [workout.started_at, workout.finished_at]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -124,6 +159,42 @@ export function WorkoutHistoryDetails({
     );
   }
 
+  async function handleSaveTime(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsedStartedAt = new Date(startedAt);
+    const parsedFinishedAt = new Date(finishedAt);
+
+    if (
+      Number.isNaN(parsedStartedAt.getTime()) ||
+      Number.isNaN(parsedFinishedAt.getTime())
+    ) {
+      setTimeError("Укажи время начала и окончания.");
+      return;
+    }
+    if (parsedStartedAt >= parsedFinishedAt) {
+      setTimeError("Начало должно быть раньше окончания.");
+      return;
+    }
+    if (parsedFinishedAt > new Date()) {
+      setTimeError("Окончание не может находиться в будущем.");
+      return;
+    }
+
+    setIsSavingTime(true);
+    setTimeError(null);
+    try {
+      const updatedWorkout = await updateWorkoutTime(token, workout.id, {
+        started_at: parsedStartedAt.toISOString(),
+        finished_at: parsedFinishedAt.toISOString(),
+      });
+      onWorkoutUpdated(updatedWorkout);
+    } catch {
+      setTimeError("Не удалось сохранить время тренировки.");
+    } finally {
+      setIsSavingTime(false);
+    }
+  }
+
   function finishEditing() {
     setIsEditing(false);
     setActionError(null);
@@ -163,6 +234,44 @@ export function WorkoutHistoryDetails({
         <p className="form-error">{error}</p>
       ) : (
         <>
+          {isEditing ? (
+            <form className="history-time-form" onSubmit={handleSaveTime}>
+              <label>
+                <span>Начало</span>
+                <input
+                  type="datetime-local"
+                  value={startedAt}
+                  onChange={(event) => setStartedAt(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Окончание</span>
+                <input
+                  type="datetime-local"
+                  value={finishedAt}
+                  max={toDateTimeLocal(new Date().toISOString())}
+                  onChange={(event) => setFinishedAt(event.target.value)}
+                  required
+                />
+              </label>
+              <button type="submit" disabled={isSavingTime}>
+                {isSavingTime ? "Сохраняем..." : "Сохранить время"}
+              </button>
+              {timeError && <p className="form-error">{timeError}</p>}
+            </form>
+          ) : (
+            <div className="history-time-summary">
+              <span>Начало: {formatDateTime(workout.started_at)}</span>
+              <span>
+                Окончание:{" "}
+                {workout.finished_at === null
+                  ? "не указано"
+                  : formatDateTime(workout.finished_at)}
+              </span>
+            </div>
+          )}
+
           {details.length === 0 ? (
             <p className="muted-text">В этой тренировке не было упражнений.</p>
           ) : isEditing ? (

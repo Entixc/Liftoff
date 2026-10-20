@@ -35,6 +35,11 @@ export type UpdateWorkoutSetPayload = {
   is_completed?: boolean;
 };
 
+export type UpdateWorkoutTimePayload = {
+  started_at: string;
+  finished_at: string;
+};
+
 export async function getActiveWorkout(token: string): Promise<Workout | null> {
   const response = await fetch(`${API_URL}/workouts/active`, {
     headers: {
@@ -81,6 +86,27 @@ export async function completeWorkout(
 
   if (!response.ok) {
     throw new Error("Не удалось завершить тренировку");
+  }
+
+  return response.json() as Promise<Workout>;
+}
+
+export async function updateWorkoutTime(
+  token: string,
+  workoutId: number,
+  payload: UpdateWorkoutTimePayload,
+): Promise<Workout> {
+  const response = await fetch(`${API_URL}/workouts/${workoutId}/time`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Не удалось изменить время тренировки");
   }
 
   return response.json() as Promise<Workout>;

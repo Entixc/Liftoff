@@ -279,6 +279,42 @@ button:disabled {
   gap: 8px;
 }
 
+.history-time-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 18px;
+  color: #617067;
+}
+
+.history-time-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.history-time-form label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.82rem;
+}
+
+.history-time-form input,
+.history-time-form button {
+  box-sizing: border-box;
+  padding: 9px 10px;
+}
+
+.history-time-form .form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .history-exercise-list {
   display: grid;
   gap: 14px;
@@ -350,7 +386,8 @@ button:disabled {
   }
 
   .set-row,
-  .add-set-form {
+  .add-set-form,
+  .history-time-form {
     grid-template-columns: 1fr;
   }
 

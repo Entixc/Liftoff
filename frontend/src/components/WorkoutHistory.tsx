@@ -48,6 +48,28 @@ export function WorkoutHistory({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  function handleWorkoutUpdated(updatedWorkout: Workout) {
+    setWorkouts((currentWorkouts) =>
+      currentWorkouts
+        .map((workout) =>
+          workout.id === updatedWorkout.id ? updatedWorkout : workout,
+        )
+        .sort((firstWorkout, secondWorkout) => {
+          const firstFinishedAt = new Date(
+            firstWorkout.finished_at ?? 0,
+          ).getTime();
+          const secondFinishedAt = new Date(
+            secondWorkout.finished_at ?? 0,
+          ).getTime();
+          return (
+            secondFinishedAt - firstFinishedAt ||
+            secondWorkout.id - firstWorkout.id
+          );
+        }),
+    );
+    setSelectedWorkout(updatedWorkout);
+  }
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -112,6 +134,7 @@ export function WorkoutHistory({
           workout={selectedWorkout}
           exercises={exercises}
           token={token}
+          onWorkoutUpdated={handleWorkoutUpdated}
           onClose={() => setSelectedWorkout(null)}
         />
       )}

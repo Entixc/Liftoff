@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,6 +36,13 @@ def create_exercise(db_session: Session, name: str) -> Exercise:
     db_session.commit()
     db_session.refresh(exercise)
     return exercise
+
+
+def parse_utc_datetime(value: str) -> datetime:
+    parsed_value = datetime.fromisoformat(value)
+    if parsed_value.tzinfo is None:
+        return parsed_value.replace(tzinfo=timezone.utc)
+    return parsed_value.astimezone(timezone.utc)
 
 
 def test_create_workout_creates_active_workout(
@@ -499,3 +508,105 @@ def test_completed_workout_content_can_be_edited_without_changing_finish_time(
         history_response.json()[0]["finished_at"]
         == completed_workout["finished_at"]
     )
+
+
+def test_update_completed_workout_time(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    client.post(f"/workouts/{workout['id']}/complete", headers=headers)
+    finished_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    started_at = finished_at - timedelta(hours=1, minutes=15)
+
+    response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json={
+            "started_at": started_at.isoformat(),
+            "finished_at": finished_at.isoformat(),
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert parse_utc_datetime(response.json()["started_at"]) == started_at
+    assert parse_utc_datetime(response.json()["finished_at"]) == finished_at
+    assert response.json()["status"] == "completed"
+
+
+def test_update_workout_time_rejects_invalid_range(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    client.post(f"/workouts/{workout['id']}/complete", headers=headers)
+    timestamp = datetime.now(timezone.utc) - timedelta(hours=1)
+
+    response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json={
+            "started_at": timestamp.isoformat(),
+            "finished_at": timestamp.isoformat(),
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Workout start must be before finish"
+    }
+
+
+def test_update_workout_time_rejects_future_finish(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    client.post(f"/workouts/{workout['id']}/complete", headers=headers)
+    started_at = datetime.now(timezone.utc)
+    finished_at = started_at + timedelta(hours=1)
+
+    response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json={
+            "started_at": started_at.isoformat(),
+            "finished_at": finished_at.isoformat(),
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Workout finish cannot be in the future"
+    }
+
+
+def test_update_workout_time_rejects_active_and_another_users_workout(
+    client: TestClient,
+) -> None:
+    owner_headers = get_auth_headers(client, nickname="owner")
+    workout = client.post("/workouts", headers=owner_headers).json()
+    finished_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    payload = {
+        "started_at": (finished_at - timedelta(hours=1)).isoformat(),
+        "finished_at": finished_at.isoformat(),
+    }
+
+    active_response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json=payload,
+        headers=owner_headers,
+    )
+    another_user_headers = get_auth_headers(client, nickname="another-user")
+    another_user_response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json=payload,
+        headers=another_user_headers,
+    )
+
+    assert active_response.status_code == 409
+    assert active_response.json() == {
+        "detail": "Only completed workout time can be changed"
+    }
+    assert another_user_response.status_code == 404
+    assert another_user_response.json() == {"detail": "Workout not found"}

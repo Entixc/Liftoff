@@ -14,6 +14,7 @@ from app.models.workout_exercise import WorkoutExercise
 from app.models.workout_set import WorkoutSet
 from app.schemas.workout import (
     AddWorkoutExerciseRequest,
+    UpdateWorkoutTimeRequest,
     WorkoutExerciseResponse,
     WorkoutResponse,
 )
@@ -121,6 +122,50 @@ def complete_workout(
 
     workout.status = "completed"
     workout.finished_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(workout)
+    return workout
+
+
+@router.patch(
+    "/{workout_id}/time",
+    response_model=WorkoutResponse,
+)
+def update_workout_time(
+    workout_id: int,
+    request: UpdateWorkoutTimeRequest,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> Workout:
+    workout = db.scalar(
+        select(Workout).where(
+            Workout.id == workout_id,
+            Workout.user_id == current_user.id,
+        )
+    )
+    if workout is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout not found",
+        )
+    if workout.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only completed workout time can be changed",
+        )
+    if request.started_at >= request.finished_at:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Workout start must be before finish",
+        )
+    if request.finished_at > datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Workout finish cannot be in the future",
+        )
+
+    workout.started_at = request.started_at
+    workout.finished_at = request.finished_at
     db.commit()
     db.refresh(workout)
     return workout
