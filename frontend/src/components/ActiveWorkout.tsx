@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { Exercise } from "../api/exercises";
 import {
   addExerciseToWorkout,
+  completeWorkout,
   deleteExerciseFromWorkout,
   getWorkoutExercises,
   startWorkout,
@@ -16,6 +17,7 @@ type ActiveWorkoutProps = {
   exercises: Exercise[];
   token: string;
   onWorkoutStarted: (workout: Workout) => void;
+  onWorkoutCompleted: () => void;
 };
 
 function formatElapsedTime(startedAt: string, currentTime: number): string {
@@ -35,6 +37,7 @@ export function ActiveWorkout({
   exercises,
   token,
   onWorkoutStarted,
+  onWorkoutCompleted,
 }: ActiveWorkoutProps) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>([]);
@@ -42,6 +45,7 @@ export function ActiveWorkout({
   const [isLoadingExercises, setIsLoadingExercises] = useState(false);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -148,6 +152,23 @@ export function ActiveWorkout({
     );
   }
 
+  async function handleCompleteWorkout() {
+    if (workout === null || !window.confirm("Завершить тренировку?")) {
+      return;
+    }
+
+    setIsCompleting(true);
+    setError(null);
+    try {
+      await completeWorkout(token, workout.id);
+      onWorkoutCompleted();
+    } catch {
+      setError("Не удалось завершить тренировку.");
+    } finally {
+      setIsCompleting(false);
+    }
+  }
+
   const addedExerciseIds = new Set(
     workoutExercises.map((item) => item.exercise_id),
   );
@@ -225,6 +246,14 @@ export function ActiveWorkout({
               <small>Все упражнения каталога уже добавлены.</small>
             )}
           </div>
+          <button
+            type="button"
+            className="complete-workout-button"
+            onClick={handleCompleteWorkout}
+            disabled={isCompleting}
+          >
+            {isCompleting ? "Завершаем..." : "Завершить тренировку"}
+          </button>
         </>
       ) : (
         <button

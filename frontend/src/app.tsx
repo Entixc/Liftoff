@@ -12,6 +12,7 @@ import { ExerciseCatalog } from "./components/ExerciseCatalog";
 import { LoginForm } from "./components/LoginForm";
 import { ProfileForm } from "./components/ProfileForm";
 import { RegisterForm } from "./components/RegisterForm";
+import { WorkoutHistory } from "./components/WorkoutHistory";
 
 type AuthMode = "login" | "register";
 
@@ -31,6 +32,7 @@ export function App() {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [isLoadingWorkout, setIsLoadingWorkout] = useState(false);
   const [workoutError, setWorkoutError] = useState<string | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   useEffect(() => {
     if (!token) {
@@ -128,6 +130,11 @@ export function App() {
     setAuthMessage("Аккаунт создан. Теперь войди.");
   }
 
+  function handleWorkoutCompleted() {
+    setActiveWorkout(null);
+    setHistoryVersion((currentVersion) => currentVersion + 1);
+  }
+
   return (
     <main>
       <h1>Workout Tracker</h1>
@@ -173,8 +180,13 @@ export function App() {
               exercises={exercises}
               token={token}
               onWorkoutStarted={setActiveWorkout}
+              onWorkoutCompleted={handleWorkoutCompleted}
             />
           )}
+          <WorkoutHistory
+            token={token}
+            refreshVersion={historyVersion}
+          />
           <button type="button" onClick={handleLogout}>
             Выйти
           </button>

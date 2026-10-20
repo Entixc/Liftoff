@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -72,6 +73,56 @@ def get_active_workout(
             detail="No active workout",
         )
 
+    return workout
+
+
+@router.get("/history", response_model=list[WorkoutResponse])
+def list_workout_history(
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> list[Workout]:
+    return list(
+        db.scalars(
+            select(Workout)
+            .where(
+                Workout.user_id == current_user.id,
+                Workout.status == "completed",
+            )
+            .order_by(Workout.finished_at.desc(), Workout.id.desc())
+        ).all()
+    )
+
+
+@router.post(
+    "/{workout_id}/complete",
+    response_model=WorkoutResponse,
+)
+def complete_workout(
+    workout_id: int,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> Workout:
+    workout = db.scalar(
+        select(Workout).where(
+            Workout.id == workout_id,
+            Workout.user_id == current_user.id,
+        )
+    )
+    if workout is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout not found",
+        )
+    if workout.status == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Workout is already completed",
+        )
+
+    workout.status = "completed"
+    workout.finished_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(workout)
     return workout
 
 

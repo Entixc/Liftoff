@@ -308,3 +308,87 @@ def test_delete_workout_exercise_rejects_another_users_workout(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Workout exercise not found"}
+
+
+def test_complete_workout_saves_it_and_allows_a_new_workout(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client)
+    workout_response = client.post("/workouts", headers=headers)
+    workout_id = workout_response.json()["id"]
+
+    response = client.post(
+        f"/workouts/{workout_id}/complete",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+    assert response.json()["finished_at"] is not None
+    assert client.get("/workouts/active", headers=headers).status_code == 404
+    assert client.post("/workouts", headers=headers).status_code == 201
+
+
+def test_complete_workout_rejects_second_completion(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client)
+    workout_response = client.post("/workouts", headers=headers)
+    url = f"/workouts/{workout_response.json()['id']}/complete"
+
+    first_response = client.post(url, headers=headers)
+    second_response = client.post(url, headers=headers)
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 409
+    assert second_response.json() == {
+        "detail": "Workout is already completed"
+    }
+
+
+def test_workout_history_returns_only_current_users_completed_workouts(
+    client: TestClient,
+) -> None:
+    headers = get_auth_headers(client, nickname="owner")
+    completed_workout = client.post("/workouts", headers=headers).json()
+    client.post(
+        f"/workouts/{completed_workout['id']}/complete",
+        headers=headers,
+    )
+    active_workout = client.post("/workouts", headers=headers).json()
+
+    another_user_headers = get_auth_headers(client, nickname="another-user")
+    another_workout = client.post(
+        "/workouts",
+        headers=another_user_headers,
+    ).json()
+    client.post(
+        f"/workouts/{another_workout['id']}/complete",
+        headers=another_user_headers,
+    )
+
+    response = client.get("/workouts/history", headers=headers)
+
+    assert response.status_code == 200
+    assert [workout["id"] for workout in response.json()] == [
+        completed_workout["id"]
+    ]
+    assert active_workout["id"] not in {
+        workout["id"] for workout in response.json()
+    }
+
+
+def test_complete_workout_rejects_another_users_workout(
+    client: TestClient,
+) -> None:
+    owner_headers = get_auth_headers(client, nickname="owner")
+    workout_response = client.post("/workouts", headers=owner_headers)
+    another_user_headers = get_auth_headers(client, nickname="another-user")
+
+    response = client.post(
+        f"/workouts/{workout_response.json()['id']}/complete",
+        headers=another_user_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Workout not found"}

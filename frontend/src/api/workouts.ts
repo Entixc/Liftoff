@@ -68,6 +68,38 @@ export async function startWorkout(token: string): Promise<Workout> {
   return response.json() as Promise<Workout>;
 }
 
+export async function completeWorkout(
+  token: string,
+  workoutId: number,
+): Promise<Workout> {
+  const response = await fetch(`${API_URL}/workouts/${workoutId}/complete`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Не удалось завершить тренировку");
+  }
+
+  return response.json() as Promise<Workout>;
+}
+
+export async function getWorkoutHistory(token: string): Promise<Workout[]> {
+  const response = await fetch(`${API_URL}/workouts/history`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Не удалось загрузить историю тренировок");
+  }
+
+  return response.json() as Promise<Workout[]>;
+}
+
 export async function getWorkoutExercises(
   token: string,
   workoutId: number,
