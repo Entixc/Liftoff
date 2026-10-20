@@ -141,7 +141,6 @@ def add_exercise_to_workout(
         select(Workout).where(
             Workout.id == workout_id,
             Workout.user_id == current_user.id,
-            Workout.status == "active",
         )
     )
     if workout is None:
@@ -235,7 +234,6 @@ def delete_workout_exercise(
             WorkoutExercise.id == workout_exercise_id,
             WorkoutExercise.workout_id == workout_id,
             Workout.user_id == current_user.id,
-            Workout.status == "active",
         )
     )
     if workout_exercise is None:

@@ -429,3 +429,73 @@ def test_completed_workout_exercises_and_sets_remain_readable(
     assert exercises_response.json()[0]["id"] == workout_exercise["id"]
     assert sets_response.status_code == 200
     assert sets_response.json()[0]["id"] == workout_set["id"]
+
+
+def test_completed_workout_content_can_be_edited_without_changing_finish_time(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    first_exercise = create_exercise(db_session, "Barbell Bench Press")
+    second_exercise = create_exercise(db_session, "Dumbbell Bench Press")
+    first_workout_exercise = client.post(
+        f"/workouts/{workout['id']}/exercises",
+        json={"exercise_id": first_exercise.id},
+        headers=headers,
+    ).json()
+    first_set = client.post(
+        f"/workouts/{workout['id']}/exercises/"
+        f"{first_workout_exercise['id']}/sets",
+        json={"weight_kg": "60", "repetitions": 10},
+        headers=headers,
+    ).json()
+    completed_workout = client.post(
+        f"/workouts/{workout['id']}/complete",
+        headers=headers,
+    ).json()
+
+    second_workout_exercise_response = client.post(
+        f"/workouts/{workout['id']}/exercises",
+        json={"exercise_id": second_exercise.id},
+        headers=headers,
+    )
+    second_workout_exercise = second_workout_exercise_response.json()
+    second_set_response = client.post(
+        f"/workouts/{workout['id']}/exercises/"
+        f"{second_workout_exercise['id']}/sets",
+        json={"weight_kg": "25", "repetitions": 12},
+        headers=headers,
+    )
+    updated_set_response = client.patch(
+        f"/workouts/{workout['id']}/exercises/"
+        f"{first_workout_exercise['id']}/sets/{first_set['id']}",
+        json={"repetitions": 8, "is_completed": True},
+        headers=headers,
+    )
+    deleted_set_response = client.delete(
+        f"/workouts/{workout['id']}/exercises/"
+        f"{second_workout_exercise['id']}/sets/"
+        f"{second_set_response.json()['id']}",
+        headers=headers,
+    )
+    deleted_exercise_response = client.delete(
+        f"/workouts/{workout['id']}/exercises/"
+        f"{second_workout_exercise['id']}",
+        headers=headers,
+    )
+    history_response = client.get("/workouts/history", headers=headers)
+
+    assert second_workout_exercise_response.status_code == 201
+    assert second_set_response.status_code == 201
+    assert updated_set_response.status_code == 200
+    assert updated_set_response.json()["repetitions"] == 8
+    assert updated_set_response.json()["is_completed"] is True
+    assert deleted_set_response.status_code == 204
+    assert deleted_exercise_response.status_code == 204
+    assert history_response.status_code == 200
+    assert history_response.json()[0]["status"] == "completed"
+    assert (
+        history_response.json()[0]["finished_at"]
+        == completed_workout["finished_at"]
+    )

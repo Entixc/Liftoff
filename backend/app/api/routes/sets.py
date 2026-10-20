@@ -32,8 +32,6 @@ def get_owned_workout_exercise(
     current_user: User,
     workout_id: int,
     workout_exercise_id: int,
-    *,
-    active_only: bool,
 ) -> tuple[WorkoutExercise, Exercise]:
     statement = (
         select(WorkoutExercise, Exercise)
@@ -45,9 +43,6 @@ def get_owned_workout_exercise(
             Workout.user_id == current_user.id,
         )
     )
-    if active_only:
-        statement = statement.where(Workout.status == "active")
-
     result = db.execute(statement).one_or_none()
     if result is None:
         raise HTTPException(
@@ -82,7 +77,6 @@ def list_workout_sets(
         current_user,
         workout_id,
         workout_exercise_id,
-        active_only=False,
     )
 
     return list(
@@ -111,7 +105,6 @@ def create_workout_set(
         current_user,
         workout_id,
         workout_exercise_id,
-        active_only=True,
     )
     validate_weight(exercise, request.weight_kg)
 
@@ -149,7 +142,6 @@ def update_workout_set(
         current_user,
         workout_id,
         workout_exercise_id,
-        active_only=True,
     )
     if not request.model_fields_set:
         raise HTTPException(
@@ -205,7 +197,6 @@ def delete_workout_set(
         current_user,
         workout_id,
         workout_exercise_id,
-        active_only=True,
     )
     workout_set = db.scalar(
         select(WorkoutSet).where(
