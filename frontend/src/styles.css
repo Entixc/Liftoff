@@ -13,3 +13,122 @@ main {
   margin: 0 auto;
   padding: 64px 24px;
 }
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.workout-card {
+  margin: 32px 0;
+  padding: 24px;
+  border: 1px solid #d9ddd7;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(25 45 31 / 8%);
+}
+
+.workout-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.workout-heading h2,
+.workout-heading p {
+  margin-top: 0;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: #55705c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workout-timer {
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #244d32;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+}
+
+.workout-exercise-list {
+  display: grid;
+  gap: 10px;
+  padding-left: 24px;
+}
+
+.workout-exercise-list li {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f3f6f2;
+}
+
+.workout-exercise-list span,
+.workout-exercise-list small {
+  display: block;
+}
+
+.workout-exercise-list small {
+  margin-top: 4px;
+  color: #617067;
+}
+
+.exercise-picker {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.exercise-picker > div {
+  display: flex;
+  gap: 10px;
+}
+
+.exercise-picker select {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 12px;
+}
+
+.exercise-picker button {
+  padding: 10px 16px;
+}
+
+.form-error {
+  color: #a32929;
+}
+
+@media (max-width: 520px) {
+  main {
+    padding: 32px 16px;
+  }
+
+  .workout-heading,
+  .exercise-picker > div {
+    flex-direction: column;
+  }
+
+  .workout-timer,
+  .exercise-picker select,
+  .exercise-picker button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

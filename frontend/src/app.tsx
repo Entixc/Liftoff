@@ -6,6 +6,8 @@ import {
   type UserProfile,
 } from "./api/auth";
 import { getExercises, type Exercise } from "./api/exercises";
+import { getActiveWorkout, type Workout } from "./api/workouts";
+import { ActiveWorkout } from "./components/ActiveWorkout";
 import { ExerciseCatalog } from "./components/ExerciseCatalog";
 import { LoginForm } from "./components/LoginForm";
 import { ProfileForm } from "./components/ProfileForm";
@@ -26,6 +28,9 @@ export function App() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(false);
   const [exercisesError, setExercisesError] = useState<string | null>(null);
+  const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
+  const [isLoadingWorkout, setIsLoadingWorkout] = useState(false);
+  const [workoutError, setWorkoutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -71,6 +76,31 @@ export function App() {
 
     void loadExercises();
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setActiveWorkout(null);
+      return;
+    }
+
+    const accessToken = token;
+
+    async function loadActiveWorkout() {
+      setIsLoadingWorkout(true);
+      setWorkoutError(null);
+
+      try {
+        const workout = await getActiveWorkout(accessToken);
+        setActiveWorkout(workout);
+      } catch {
+        setWorkoutError("Не удалось загрузить текущую тренировку.");
+      } finally {
+        setIsLoadingWorkout(false);
+      }
+    }
+
+    void loadActiveWorkout();
+  }, [token]);
 
   function handleLogin(tokenResponse: TokenResponse) {
     localStorage.setItem("access_token", tokenResponse.access_token);
@@ -135,6 +165,16 @@ export function App() {
             token={token}
             onProfileUpdated={setProfile}
           />
+          {isLoadingWorkout && <p>Загружаем тренировку...</p>}
+          {workoutError && <p>{workoutError}</p>}
+          {!isLoadingWorkout && !workoutError && (
+            <ActiveWorkout
+              workout={activeWorkout}
+              exercises={exercises}
+              token={token}
+              onWorkoutStarted={setActiveWorkout}
+            />
+          )}
           <button type="button" onClick={handleLogout}>
             Выйти
           </button>

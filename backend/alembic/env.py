@@ -9,6 +9,8 @@ import os
 from app.db.base import Base
 from app.models.user import User
 from app.models.exercise import Exercise
+from app.models.workout import Workout
+from app.models.workout_exercise import WorkoutExercise
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
