@@ -8,6 +8,7 @@ import {
   type Workout,
   type WorkoutExercise,
 } from "../api/workouts";
+import { WorkoutExerciseCard } from "./WorkoutExerciseCard";
 
 type ActiveWorkoutProps = {
   workout: Workout | null;
@@ -164,20 +165,21 @@ export function ActiveWorkout({
           {isLoadingExercises ? (
             <p>Загружаем упражнения...</p>
           ) : workoutExercises.length > 0 ? (
-            <ol className="workout-exercise-list">
+            <div className="workout-exercise-list">
               {workoutExercises.map((item) => {
                 const exercise = exerciseById.get(item.exercise_id);
 
                 return (
-                  <li key={item.id}>
-                    <span>{exercise?.name ?? `Упражнение #${item.exercise_id}`}</span>
-                    {exercise?.is_bodyweight && (
-                      <small>С собственным весом</small>
-                    )}
-                  </li>
+                  <WorkoutExerciseCard
+                    key={item.id}
+                    exercise={exercise}
+                    token={token}
+                    workoutId={workout.id}
+                    workoutExercise={item}
+                  />
                 );
               })}
-            </ol>
+            </div>
           ) : (
             <p>Пока нет упражнений. Добавь первое из каталога.</p>
           )}

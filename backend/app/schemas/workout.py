@@ -1,5 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -22,4 +24,32 @@ class WorkoutExerciseResponse(BaseModel):
     id: int
     workout_id: int
     exercise_id: int
+    position: int
+
+
+Weight = Annotated[
+    Decimal | None,
+    Field(gt=0, lt=1000, decimal_places=2),
+]
+
+
+class CreateWorkoutSetRequest(BaseModel):
+    weight_kg: Weight = None
+    repetitions: Annotated[int, Field(gt=0)]
+
+
+class UpdateWorkoutSetRequest(BaseModel):
+    weight_kg: Weight = None
+    repetitions: Annotated[int | None, Field(gt=0)] = None
+    is_completed: bool | None = None
+
+
+class WorkoutSetResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    workout_exercise_id: int
+    weight_kg: Decimal | None
+    repetitions: int
+    is_completed: bool
     position: int

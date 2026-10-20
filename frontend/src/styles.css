@@ -70,24 +70,110 @@ button:disabled {
 
 .workout-exercise-list {
   display: grid;
-  gap: 10px;
-  padding-left: 24px;
+  gap: 16px;
+  margin-top: 20px;
 }
 
-.workout-exercise-list li {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #f3f6f2;
+.workout-exercise-card {
+  padding: 18px;
+  border: 1px solid #dfe5df;
+  border-radius: 12px;
+  background: #f8faf7;
 }
 
-.workout-exercise-list span,
-.workout-exercise-list small {
-  display: block;
+.workout-exercise-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.workout-exercise-list small {
-  margin-top: 4px;
+.workout-exercise-heading h3 {
+  margin: 4px 0 0;
+}
+
+.workout-exercise-heading small,
+.muted-text {
   color: #617067;
+}
+
+.exercise-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #28543a;
+  background: #dfeee3;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.set-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: auto minmax(90px, 1fr) minmax(90px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.set-row-completed {
+  background: #e8f3e9;
+}
+
+.set-row label,
+.add-set-form label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.82rem;
+}
+
+.set-row input[type="number"],
+.add-set-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.set-completed {
+  align-self: center;
+  grid-template-columns: auto auto !important;
+  align-items: center;
+}
+
+.set-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.set-actions button,
+.add-set-form button {
+  padding: 9px 12px;
+}
+
+.danger-button {
+  color: #8a2424;
+}
+
+.set-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.add-set-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #dfe5df;
 }
 
 .exercise-picker {
@@ -121,8 +207,18 @@ button:disabled {
   }
 
   .workout-heading,
-  .exercise-picker > div {
+  .exercise-picker > div,
+  .workout-exercise-heading {
     flex-direction: column;
+  }
+
+  .set-row,
+  .add-set-form {
+    grid-template-columns: 1fr;
+  }
+
+  .set-actions {
+    flex-wrap: wrap;
   }
 
   .workout-timer,
