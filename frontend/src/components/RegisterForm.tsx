@@ -1,91 +1,95 @@
 import { type FormEvent, useState } from "react";
-
 import { register } from "../api/auth";
-
-type RegisterFormProps = {
-  onRegistered: (nickname: string) => void;
-  onShowLogin: () => void;
-};
+import { ApiError, errorMessage } from "../api/http";
+import { Button, Icon, Input, PasswordInput } from "./ui";
 
 export function RegisterForm({
   onRegistered,
   onShowLogin,
-}: RegisterFormProps) {
+}: {
+  onRegistered: (name: string) => void;
+  onShowLogin: () => void;
+}) {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [repeat, setRepeat] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-
-    if (password !== passwordConfirmation) {
+    if (password !== repeat) {
       setError("Пароли не совпадают.");
       return;
     }
-
-    setIsSubmitting(true);
-
+    setBusy(true);
     try {
       await register({ nickname, password });
       onRegistered(nickname);
-    } catch {
-      setError("Не удалось зарегистрироваться. Возможно, никнейм уже занят.");
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.status === 409
+          ? "Этот никнейм уже занят. Выбери другой."
+          : errorMessage(e),
+      );
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   }
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Регистрация</h2>
-
-      <label>
-        Никнейм
-        <input
-          value={nickname}
-          onChange={(event) => setNickname(event.target.value)}
-          minLength={3}
-          maxLength={50}
-          required
-        />
-      </label>
-
-      <label>
-        Пароль
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          minLength={8}
-          maxLength={128}
-          required
-        />
-      </label>
-
-      <label>
-        Повтори пароль
-        <input
-          type="password"
-          value={passwordConfirmation}
-          onChange={(event) => setPasswordConfirmation(event.target.value)}
-          minLength={8}
-          maxLength={128}
-          required
-        />
-      </label>
-
-      {error && <p>{error}</p>}
-
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Создаём аккаунт..." : "Зарегистрироваться"}
-      </button>
-
-      <button type="button" onClick={onShowLogin}>
-        Уже есть аккаунт
-      </button>
+    <form className="auth-form" onSubmit={submit}>
+      <div>
+        <p className="eyebrow">Начало твоей истории</p>
+        <h1>
+          Каждая тренировка
+          <br />
+          имеет значение.
+        </h1>
+        <p className="muted">Создай аккаунт и сохрани первый результат.</p>
+      </div>
+      <Input
+        label="Никнейм"
+        autoComplete="username"
+        value={nickname}
+        onChange={(e) => setNickname(e.target.value)}
+        minLength={3}
+        maxLength={50}
+        required
+        placeholder="От 3 до 50 символов"
+      />
+      <PasswordInput
+        label="Пароль"
+        autoComplete="new-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        minLength={8}
+        maxLength={128}
+        required
+        placeholder="Минимум 8 символов"
+      />
+      <PasswordInput
+        label="Повтори пароль"
+        autoComplete="new-password"
+        value={repeat}
+        onChange={(e) => setRepeat(e.target.value)}
+        required
+        placeholder="Ещё раз, чтобы не ошибиться"
+      />
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <Button type="submit" variant="primary" disabled={busy}>
+        {busy ? "Создаём…" : "Создать аккаунт"}
+        <Icon name="arrow" />
+      </Button>
+      <p className="auth-switch">
+        Уже с нами?{" "}
+        <button type="button" className="text-button" onClick={onShowLogin}>
+          Войти
+        </button>
+      </p>
     </form>
   );
 }

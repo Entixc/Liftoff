@@ -1,4 +1,5 @@
 import { API_URL } from "./config";
+import { apiFetch as fetch, ApiError } from "./http";
 
 export type LoginPayload = {
   nickname: string;
@@ -28,9 +29,7 @@ export type UpdateProfilePayload = {
   body_weight_kg?: number | null;
 };
 
-export async function login(
-  payload: LoginPayload,
-): Promise<TokenResponse> {
+export async function login(payload: LoginPayload): Promise<TokenResponse> {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
@@ -40,15 +39,13 @@ export async function login(
   });
 
   if (!response.ok) {
-    throw new Error("Не удалось выполнить вход");
+    throw new ApiError(response.status);
   }
 
   return response.json() as Promise<TokenResponse>;
 }
 
-export async function register(
-  payload: RegisterPayload,
-): Promise<UserProfile> {
+export async function register(payload: RegisterPayload): Promise<UserProfile> {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: {
@@ -58,7 +55,7 @@ export async function register(
   });
 
   if (!response.ok) {
-    throw new Error("Не удалось зарегистрироваться");
+    throw new ApiError(response.status);
   }
 
   return response.json() as Promise<UserProfile>;
@@ -72,7 +69,7 @@ export async function getMyProfile(token: string): Promise<UserProfile> {
   });
 
   if (!response.ok) {
-    throw new Error("Не удалось загрузить профиль");
+    throw new ApiError(response.status);
   }
 
   return response.json() as Promise<UserProfile>;
@@ -92,7 +89,7 @@ export async function updateMyProfile(
   });
 
   if (!response.ok) {
-    throw new Error("Не удалось обновить профиль");
+    throw new ApiError(response.status);
   }
 
   return response.json() as Promise<UserProfile>;

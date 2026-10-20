@@ -1,271 +1,128 @@
 import { useEffect, useState } from "react";
-
 import type { Exercise } from "../api/exercises";
+import { completeWorkout, type Workout } from "../api/workouts";
+import { errorMessage } from "../api/http";
+import { formatElapsed, formatTime } from "../lib/format";
+import { WorkoutEditor } from "./WorkoutEditor";
 import {
-  addExerciseToWorkout,
-  completeWorkout,
-  deleteExerciseFromWorkout,
-  getWorkoutExercises,
-  startWorkout,
-  type Workout,
-  type WorkoutExercise,
-} from "../api/workouts";
-import { WorkoutExerciseCard } from "./WorkoutExerciseCard";
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  Icon,
+  Panel,
+  useUI,
+} from "./ui";
 
-type ActiveWorkoutProps = {
-  workout: Workout | null;
-  exercises: Exercise[];
-  token: string;
-  onWorkoutStarted: (workout: Workout) => void;
-  onWorkoutCompleted: () => void;
-};
-
-function formatElapsedTime(startedAt: string, currentTime: number): string {
-  const elapsedMilliseconds = currentTime - new Date(startedAt).getTime();
-  const elapsedSeconds = Math.max(0, Math.floor(elapsedMilliseconds / 1000));
-  const hours = Math.floor(elapsedSeconds / 3600);
-  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-  const seconds = elapsedSeconds % 60;
-
-  return [hours, minutes, seconds]
-    .map((value) => String(value).padStart(2, "0"))
-    .join(":");
+export function WorkoutTimer({ startedAt }: { startedAt: string }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span className="timer" aria-label="Время тренировки">
+      {formatElapsed(startedAt, now)}
+    </span>
+  );
 }
-
 export function ActiveWorkout({
   workout,
   exercises,
   token,
-  onWorkoutStarted,
+  onStart,
+  starting,
   onWorkoutCompleted,
-}: ActiveWorkoutProps) {
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>([]);
-  const [selectedExerciseId, setSelectedExerciseId] = useState("");
-  const [isLoadingExercises, setIsLoadingExercises] = useState(false);
-  const [isAddingExercise, setIsAddingExercise] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
+}: {
+  workout: Workout | null;
+  exercises: Exercise[];
+  token: string;
+  onStart: () => void;
+  starting: boolean;
+  onWorkoutCompleted: (workout: Workout) => void;
+}) {
+  const [completing, setCompleting] = useState(false);
+  const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (workout === null) {
+  const { confirm, notify } = useUI();
+  async function finish() {
+    if (
+      !workout ||
+      !(await confirm({
+        title: "Сохраним тренировку?",
+        message:
+          "Все упражнения и подходы попадут в историю. Невыполненные подходы сохранят свою отметку.",
+        label: "Завершить тренировку",
+      }))
+    )
       return;
-    }
-
-    setCurrentTime(Date.now());
-    const intervalId = window.setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [workout]);
-
-  useEffect(() => {
-    if (workout === null) {
-      setWorkoutExercises([]);
-      return;
-    }
-
-    const currentWorkout = workout;
-    let isCancelled = false;
-
-    async function loadWorkoutExercises() {
-      setIsLoadingExercises(true);
-      setError(null);
-
-      try {
-        const loadedExercises = await getWorkoutExercises(
-          token,
-          currentWorkout.id,
-        );
-        if (!isCancelled) {
-          setWorkoutExercises(loadedExercises);
-        }
-      } catch {
-        if (!isCancelled) {
-          setError("Не удалось загрузить упражнения тренировки.");
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingExercises(false);
-        }
-      }
-    }
-
-    void loadWorkoutExercises();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [token, workout]);
-
-  async function handleStartWorkout() {
-    setIsStarting(true);
+    setCompleting(true);
     setError(null);
-
     try {
-      const createdWorkout = await startWorkout(token);
-      onWorkoutStarted(createdWorkout);
-    } catch {
-      setError("Не удалось начать тренировку. Попробуй ещё раз.");
+      onWorkoutCompleted(await completeWorkout(token, workout.id));
+      notify("Тренировка сохранена в истории");
+    } catch (e) {
+      setError(errorMessage(e, "Не удалось завершить тренировку."));
     } finally {
-      setIsStarting(false);
+      setCompleting(false);
     }
   }
-
-  async function handleAddExercise() {
-    if (workout === null || selectedExerciseId === "") {
-      return;
-    }
-
-    setIsAddingExercise(true);
-    setError(null);
-
-    try {
-      const addedExercise = await addExerciseToWorkout(
-        token,
-        workout.id,
-        Number(selectedExerciseId),
-      );
-      setWorkoutExercises((currentExercises) =>
-        [...currentExercises, addedExercise].sort(
-          (first, second) => first.position - second.position,
-        ),
-      );
-      setSelectedExerciseId("");
-    } catch {
-      setError("Не удалось добавить упражнение. Попробуй ещё раз.");
-    } finally {
-      setIsAddingExercise(false);
-    }
-  }
-
-  async function handleDeleteExercise(workoutExerciseId: number) {
-    if (workout === null) {
-      return;
-    }
-
-    await deleteExerciseFromWorkout(token, workout.id, workoutExerciseId);
-    setWorkoutExercises((currentExercises) =>
-      currentExercises.filter((item) => item.id !== workoutExerciseId),
+  if (!workout)
+    return (
+      <Panel className="start-panel">
+        <EmptyState
+          title="Время для себя"
+          description="Начни тренировку, выбери упражнения и записывай подходы. Остальное мы сохраним."
+          action={
+            <Button variant="primary" onClick={onStart} disabled={starting}>
+              <Icon name="plus" />
+              {starting ? "Начинаем…" : "Начать тренировку"}
+            </Button>
+          }
+        />
+        <p className="field-hint">
+          Записываешь задним числом? После завершения можно исправить время в
+          истории.
+        </p>
+      </Panel>
     );
-  }
-
-  async function handleCompleteWorkout() {
-    if (workout === null || !window.confirm("Завершить тренировку?")) {
-      return;
-    }
-
-    setIsCompleting(true);
-    setError(null);
-    try {
-      await completeWorkout(token, workout.id);
-      onWorkoutCompleted();
-    } catch {
-      setError("Не удалось завершить тренировку.");
-    } finally {
-      setIsCompleting(false);
-    }
-  }
-
-  const addedExerciseIds = new Set(
-    workoutExercises.map((item) => item.exercise_id),
-  );
-  const availableExercises = exercises.filter(
-    (exercise) => !addedExerciseIds.has(exercise.id),
-  );
-  const exerciseById = new Map(
-    exercises.map((exercise) => [exercise.id, exercise]),
-  );
-
   return (
-    <section className="workout-card">
-      <div className="workout-heading">
+    <>
+      <div className="session-bar">
         <div>
-          <p className="eyebrow">Текущая тренировка</p>
-          <h2>{workout ? "Тренировка идёт" : "Готов к тренировке?"}</h2>
+          <Badge active>Тренировка идёт</Badge>
+          <p className="muted">Начало в {formatTime(workout.started_at)}</p>
         </div>
-        {workout && (
-          <strong className="workout-timer">
-            {formatElapsedTime(workout.started_at, currentTime)}
-          </strong>
-        )}
-      </div>
-
-      {workout ? (
-        <>
-          {isLoadingExercises ? (
-            <p>Загружаем упражнения...</p>
-          ) : workoutExercises.length > 0 ? (
-            <div className="workout-exercise-list">
-              {workoutExercises.map((item) => {
-                const exercise = exerciseById.get(item.exercise_id);
-
-                return (
-                  <WorkoutExerciseCard
-                    key={item.id}
-                    exercise={exercise}
-                    token={token}
-                    workoutId={workout.id}
-                    workoutExercise={item}
-                    onDeleteExercise={handleDeleteExercise}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <p>Пока нет упражнений. Добавь первое из каталога.</p>
-          )}
-
-          <div className="exercise-picker">
-            <label htmlFor="workout-exercise">Добавить упражнение</label>
-            <div>
-              <select
-                id="workout-exercise"
-                value={selectedExerciseId}
-                onChange={(event) => setSelectedExerciseId(event.target.value)}
-                disabled={isAddingExercise || availableExercises.length === 0}
-              >
-                <option value="">Выбери упражнение</option>
-                {availableExercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>
-                    {exercise.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAddExercise}
-                disabled={selectedExerciseId === "" || isAddingExercise}
-              >
-                {isAddingExercise ? "Добавляем..." : "Добавить"}
-              </button>
-            </div>
-            {availableExercises.length === 0 && exercises.length > 0 && (
-              <small>Все упражнения каталога уже добавлены.</small>
-            )}
-          </div>
-          <button
-            type="button"
-            className="complete-workout-button"
-            onClick={handleCompleteWorkout}
-            disabled={isCompleting}
-          >
-            {isCompleting ? "Завершаем..." : "Завершить тренировку"}
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={handleStartWorkout}
-          disabled={isStarting}
+        <WorkoutTimer startedAt={workout.started_at} />
+        <Button
+          variant="primary"
+          onClick={() => void finish()}
+          disabled={completing || operations > 0}
         >
-          {isStarting ? "Начинаем..." : "Начать тренировку"}
-        </button>
-      )}
-
-      {error && <p className="form-error">{error}</p>}
-    </section>
+          <Icon name="check" />
+          <span>{completing ? "Сохраняем…" : "Завершить"}</span>
+        </Button>
+      </div>
+      {error && <ErrorState message={error} />}
+      <WorkoutEditor
+        token={token}
+        workoutId={workout.id}
+        exercises={exercises}
+        onBusy={(delta) => setOperations((n) => n + delta)}
+      />
+      <div className="finish-panel">
+        <div>
+          <h3>На сегодня всё?</h3>
+          <p className="muted">Сохрани результат и дай себе восстановиться.</p>
+        </div>
+        <Button
+          onClick={() => void finish()}
+          disabled={completing || operations > 0}
+        >
+          Завершить тренировку
+          <Icon name="arrow" />
+        </Button>
+      </div>
+    </>
   );
 }

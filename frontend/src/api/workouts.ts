@@ -1,4 +1,5 @@
 import { API_URL } from "./config";
+import { apiFetch as fetch } from "./http";
 
 export type Workout = {
   id: number;

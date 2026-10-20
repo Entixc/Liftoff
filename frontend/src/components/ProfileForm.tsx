@@ -1,85 +1,82 @@
 import { type FormEvent, useState } from "react";
-
-import {
-  updateMyProfile,
-  type UserProfile,
-} from "../api/auth";
-
-type ProfileFormProps = {
-  profile: UserProfile;
-  token: string;
-  onProfileUpdated: (profile: UserProfile) => void;
-};
+import { updateMyProfile, type UserProfile } from "../api/auth";
+import { errorMessage } from "../api/http";
+import { Button, Icon, Input, Panel, useUI } from "./ui";
 
 export function ProfileForm({
   profile,
   token,
   onProfileUpdated,
-}: ProfileFormProps) {
-  const [heightCm, setHeightCm] = useState(
-    profile.height_cm?.toString() ?? "",
-  );
-  const [bodyWeightKg, setBodyWeightKg] = useState(
-    profile.body_weight_kg ?? "",
-  );
+}: {
+  profile: UserProfile;
+  token: string;
+  onProfileUpdated: (profile: UserProfile) => void;
+}) {
+  const [height, setHeight] = useState(profile.height_cm?.toString() ?? "");
+  const [weight, setWeight] = useState(profile.body_weight_kg ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [busy, setBusy] = useState(false);
+  const { notify } = useUI();
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    setBusy(true);
     setError(null);
-    setIsSaved(false);
-    setIsSubmitting(true);
-
     try {
-      const updatedProfile = await updateMyProfile(token, {
-        height_cm: heightCm === "" ? null : Number(heightCm),
-        body_weight_kg:
-          bodyWeightKg === "" ? null : Number(bodyWeightKg),
-      });
-
-      onProfileUpdated(updatedProfile);
-      setIsSaved(true);
-    } catch {
-      setError("Не удалось сохранить профиль.");
+      onProfileUpdated(
+        await updateMyProfile(token, {
+          height_cm: height === "" ? null : Number(height),
+          body_weight_kg: weight === "" ? null : Number(weight),
+        }),
+      );
+      notify("Данные профиля сохранены");
+    } catch (e) {
+      setError(errorMessage(e, "Не удалось сохранить профиль."));
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   }
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Профиль</h2>
-
-      <label>
-        Рост, см
-        <input
-          type="number"
-          min="1"
-          value={heightCm}
-          onChange={(event) => setHeightCm(event.target.value)}
-        />
-      </label>
-
-      <label>
-        Вес, кг
-        <input
-          type="number"
-          min="0.01"
-          max="999.99"
-          step="0.01"
-          value={bodyWeightKg}
-          onChange={(event) => setBodyWeightKg(event.target.value)}
-        />
-      </label>
-
-      {error && <p>{error}</p>}
-      {isSaved && <p>Профиль сохранён.</p>}
-
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Сохраняем..." : "Сохранить"}
-      </button>
-    </form>
+    <Panel>
+      <div className="section-heading">
+        <h2>Твои параметры</h2>
+        <Icon name="user" />
+      </div>
+      <p className="muted">Обновляй данные, когда они меняются.</p>
+      <form className="profile-form" onSubmit={submit}>
+        <div className="two-columns">
+          <Input
+            label="Рост, см"
+            type="number"
+            min="1"
+            step="1"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            placeholder="Не указан"
+          />
+          <Input
+            label="Вес, кг"
+            type="number"
+            min="0.01"
+            max="999.99"
+            step="0.01"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="Не указан"
+          />
+        </div>
+        <p className="field-hint">
+          Чтобы очистить параметр, оставь поле пустым и сохрани.
+        </p>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy ? "Сохраняем…" : "Сохранить изменения"}
+          <Icon name="check" />
+        </Button>
+      </form>
+    </Panel>
   );
 }
