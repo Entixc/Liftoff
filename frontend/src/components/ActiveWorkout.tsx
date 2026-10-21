@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Exercise } from "../api/exercises";
-import { completeWorkout, type Workout } from "../api/workouts";
+import { cancelWorkout, completeWorkout, type Workout } from "../api/workouts";
 import { errorMessage } from "../api/http";
 import { formatElapsed, formatTime } from "../lib/format";
 import { WorkoutEditor } from "./WorkoutEditor";
@@ -33,6 +33,7 @@ export function ActiveWorkout({
   onStart,
   starting,
   onWorkoutCompleted,
+  onWorkoutCancelled,
 }: {
   workout: Workout | null;
   exercises: Exercise[];
@@ -40,8 +41,10 @@ export function ActiveWorkout({
   onStart: () => void;
   starting: boolean;
   onWorkoutCompleted: (workout: Workout) => void;
+  onWorkoutCancelled: () => void;
 }) {
   const [completing, setCompleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { confirm, notify } = useUI();
@@ -65,6 +68,30 @@ export function ActiveWorkout({
       setError(errorMessage(e, "Не удалось завершить тренировку."));
     } finally {
       setCompleting(false);
+    }
+  }
+  async function cancel() {
+    if (
+      !workout ||
+      !(await confirm({
+        title: "Отменить тренировку?",
+        message:
+          "Текущая тренировка, все её упражнения и подходы будут безвозвратно удалены. В истории её не будет.",
+        label: "Удалить тренировку",
+        danger: true,
+      }))
+    )
+      return;
+    setCancelling(true);
+    setError(null);
+    try {
+      await cancelWorkout(token, workout.id);
+      onWorkoutCancelled();
+      notify("Тренировка отменена и удалена");
+    } catch (e) {
+      setError(errorMessage(e, "Не удалось отменить тренировку."));
+    } finally {
+      setCancelling(false);
     }
   }
   if (!workout)
@@ -94,14 +121,24 @@ export function ActiveWorkout({
           <p className="muted">Начало в {formatTime(workout.started_at)}</p>
         </div>
         <WorkoutTimer startedAt={workout.started_at} />
-        <Button
-          variant="primary"
-          onClick={() => void finish()}
-          disabled={completing || operations > 0}
-        >
-          <Icon name="check" />
-          <span>{completing ? "Сохраняем…" : "Завершить"}</span>
-        </Button>
+        <div className="session-actions">
+          <Button
+            variant="ghost"
+            onClick={() => void cancel()}
+            disabled={completing || cancelling || operations > 0}
+          >
+            <Icon name="trash" />
+            <span>{cancelling ? "Удаляем…" : "Отменить"}</span>
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => void finish()}
+            disabled={completing || cancelling || operations > 0}
+          >
+            <Icon name="check" />
+            <span>{completing ? "Сохраняем…" : "Завершить"}</span>
+          </Button>
+        </div>
       </div>
       {error && <ErrorState message={error} />}
       <WorkoutEditor
@@ -117,7 +154,7 @@ export function ActiveWorkout({
         </div>
         <Button
           onClick={() => void finish()}
-          disabled={completing || operations > 0}
+          disabled={completing || cancelling || operations > 0}
         >
           Завершить тренировку
           <Icon name="arrow" />

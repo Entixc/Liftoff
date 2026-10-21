@@ -12,6 +12,9 @@ from app.models.exercise import Exercise
 from app.models.workout import Workout
 from app.models.workout_exercise import WorkoutExercise
 from app.models.workout_set import WorkoutSet
+from app.models.routine import Routine
+from app.models.routine_exercise import RoutineExercise
+from app.models.routine_set import RoutineSet
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

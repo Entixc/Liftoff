@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import type { Exercise } from "../api/exercises";
-import { updateWorkoutTime, type Workout } from "../api/workouts";
+import {
+  getWorkoutExercises,
+  getWorkoutSets,
+  updateWorkoutTime,
+  type Workout,
+} from "../api/workouts";
+import { saveRoutine, type Routine } from "../api/routines";
 import { errorMessage } from "../api/http";
 import { formatDate, formatDuration, formatTime } from "../lib/format";
 import { Badge, Button, Icon, Input, Panel, useUI } from "./ui";
@@ -19,12 +25,14 @@ export function WorkoutHistoryDetails({
   workout,
   onClose,
   onWorkoutUpdated,
+  onRoutineSaved,
 }: {
   exercises: Exercise[];
   token: string;
   workout: Workout;
   onClose: () => void;
   onWorkoutUpdated: (workout: Workout) => void;
+  onRoutineSaved: (routine: Routine) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [start, setStart] = useState(() => localInput(workout.started_at));
@@ -32,7 +40,47 @@ export function WorkoutHistoryDetails({
   const [saving, setSaving] = useState(false);
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [routineOpen, setRoutineOpen] = useState(false);
+  const [routineName, setRoutineName] = useState("");
+  const [routineSaving, setRoutineSaving] = useState(false);
+  const [routineError, setRoutineError] = useState<string | null>(null);
   const { notify } = useUI();
+  async function saveAsRoutine(event: FormEvent) {
+    event.preventDefault();
+    setRoutineSaving(true);
+    setRoutineError(null);
+    try {
+      const workoutExercises = await getWorkoutExercises(token, workout.id);
+      if (!workoutExercises.length) {
+        setRoutineError("В тренировке нет упражнений для рутины.");
+        return;
+      }
+      const sets = await Promise.all(
+        workoutExercises.map((item) =>
+          getWorkoutSets(token, workout.id, item.id),
+        ),
+      );
+      const saved = await saveRoutine(token, {
+        name: routineName.trim(),
+        exercise_ids: workoutExercises.map((item) => item.exercise_id),
+        planned_sets: workoutExercises.flatMap((item, index) =>
+          sets[index].map((set) => ({
+            exercise_id: item.exercise_id,
+            weight_kg: set.weight_kg === null ? null : Number(set.weight_kg),
+            repetitions: set.repetitions,
+          })),
+        ),
+      });
+      onRoutineSaved(saved);
+      setRoutineOpen(false);
+      setRoutineName("");
+      notify("Рутина сохранена");
+    } catch (e) {
+      setRoutineError(errorMessage(e, "Не удалось сохранить рутину."));
+    } finally {
+      setRoutineSaving(false);
+    }
+  }
   async function saveTime(event: FormEvent) {
     event.preventDefault();
     const started = new Date(start),
@@ -80,6 +128,16 @@ export function WorkoutHistoryDetails({
           <Icon name="back" />В историю
         </Button>
         <Button
+          disabled={operations > 0 || routineSaving}
+          onClick={() => {
+            setRoutineOpen((value) => !value);
+            setRoutineError(null);
+          }}
+        >
+          <Icon name="routine" />
+          Сохранить как рутину
+        </Button>
+        <Button
           variant={editing ? "primary" : "secondary"}
           disabled={operations > 0 || saving}
           onClick={() => {
@@ -93,6 +151,38 @@ export function WorkoutHistoryDetails({
           {editing ? "Готово" : "Редактировать"}
         </Button>
       </div>
+      {routineOpen && (
+        <Panel className="routine-from-history">
+          <form onSubmit={(event) => void saveAsRoutine(event)}>
+            <h2>Новая рутина из тренировки</h2>
+            <p className="muted">
+              Сохранятся упражнения, подходы, веса и повторения. Время и отметки
+              выполнения не копируются.
+            </p>
+            <Input
+              label="Название рутины"
+              value={routineName}
+              required
+              maxLength={80}
+              disabled={routineSaving}
+              onChange={(event) => setRoutineName(event.target.value)}
+              placeholder="Например, День груди"
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={routineSaving || !routineName.trim()}
+            >
+              {routineSaving ? "Сохраняем…" : "Сохранить рутину"}
+            </Button>
+            {routineError && (
+              <p className="form-error" role="alert">
+                {routineError}
+              </p>
+            )}
+          </form>
+        </Panel>
+      )}
       <Panel className="history-summary">
         <div>
           <Badge active>Завершена</Badge>

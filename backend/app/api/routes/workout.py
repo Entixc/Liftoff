@@ -94,6 +94,35 @@ def list_workout_history(
     )
 
 
+@router.delete("/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_workout(
+    workout_id: int,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> Response:
+    workout = db.scalar(
+        select(Workout).where(
+            Workout.id == workout_id,
+            Workout.user_id == current_user.id,
+        )
+    )
+    if workout is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    if workout.status != "active":
+        raise HTTPException(status_code=409, detail="Only active workout can be cancelled")
+
+    exercise_ids = select(WorkoutExercise.id).where(
+        WorkoutExercise.workout_id == workout.id
+    )
+    db.execute(
+        delete(WorkoutSet).where(WorkoutSet.workout_exercise_id.in_(exercise_ids))
+    )
+    db.execute(delete(WorkoutExercise).where(WorkoutExercise.workout_id == workout.id))
+    db.delete(workout)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post(
     "/{workout_id}/complete",
     response_model=WorkoutResponse,

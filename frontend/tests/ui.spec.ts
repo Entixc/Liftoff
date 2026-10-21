@@ -1,6 +1,132 @@
 import { test, expect } from "@playwright/test";
 import { mockAPI, noOverflow, startWithExercise } from "./fixtures";
 
+test("routine starts with planned sets and cancellation removes the active workout", async ({
+  page,
+}) => {
+  const state = await mockAPI(page);
+  await page.goto("/#/routines");
+  await page.getByRole("button", { name: "Создать рутину" }).first().click();
+  await page.getByLabel("Название рутины").fill("Heavy bench");
+  await page.getByLabel("Добавить упражнение").selectOption("1");
+  await page
+    .getByRole("button", { name: "Добавить подход для Barbell Bench Press" })
+    .click();
+  const first = page.locator(".routine-set-row").first();
+  await first.getByLabel("Вес, кг").fill("60");
+  await first.getByLabel("Повторения").fill("10");
+  await page
+    .getByRole("button", { name: "Добавить подход для Barbell Bench Press" })
+    .click();
+  const second = page.locator(".routine-set-row").nth(1);
+  await second.getByLabel("Вес, кг").fill("65");
+  await second.getByLabel("Повторения").fill("8");
+  await page.setViewportSize({ width: 320, height: 720 });
+  await noOverflow(page);
+  await page.getByRole("button", { name: "Сохранить рутину" }).click();
+  expect(
+    state.routines[0].planned_sets.map((item) => item.repetitions),
+  ).toEqual([10, 8]);
+  await page
+    .locator(".routine-card")
+    .getByRole("button", { name: "Начать" })
+    .click();
+  await expect(page.locator(".set-row")).toHaveCount(2);
+  await expect(
+    page.locator(".set-row").first().getByLabel("Вес, кг"),
+  ).toHaveValue("60.00");
+  await expect(
+    page.locator(".set-row").nth(1).getByLabel("Вес, кг"),
+  ).toHaveValue("65.00");
+  await expect(
+    page.locator(".set-row").first().getByRole("checkbox"),
+  ).not.toBeChecked();
+  await page.getByRole("button", { name: "Отменить", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("безвозвратно удалены");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Отмена" })
+    .click();
+  await expect(page.locator(".set-row")).toHaveCount(2);
+  await page.getByRole("button", { name: "Отменить", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Удалить тренировку" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Время для себя" }),
+  ).toBeVisible();
+  expect(state.items.filter((item) => item.workout_id === 4)).toHaveLength(0);
+  expect(
+    state.sets.filter((set) => set.workout_exercise_id !== 1),
+  ).toHaveLength(0);
+  expect(state.history).toHaveLength(3);
+  expect(state.routines).toHaveLength(1);
+  await noOverflow(page);
+});
+
+test("routine can be created, reordered and started with last-set hints", async ({
+  page,
+}) => {
+  const state = await mockAPI(page);
+  await page.goto("/#/routines");
+  await page.getByRole("button", { name: "Создать рутину" }).first().click();
+  await page.getByLabel("Название рутины").fill("Push day");
+  await page.getByLabel("Добавить упражнение").selectOption("1");
+  await page.getByLabel("Добавить упражнение").selectOption("2");
+  await page.getByRole("button", { name: "Поднять Pull-Ups" }).click();
+  await page.getByRole("button", { name: "Сохранить рутину" }).click();
+  await expect(page.locator(".routine-card")).toHaveCount(1);
+  expect(state.routines[0].exercise_ids).toEqual([2, 1]);
+  await page
+    .locator(".routine-card")
+    .getByRole("button", { name: "Начать" })
+    .click();
+  await expect(page.locator(".workout-exercise-card")).toHaveCount(2);
+  const bench = page
+    .locator(".workout-exercise-card")
+    .filter({ hasText: "Barbell Bench Press" });
+  await expect(
+    bench.locator(".add-set-form").getByLabel("Вес, кг"),
+  ).toHaveValue("60.00");
+  await expect(
+    bench.locator(".add-set-form").getByLabel("Повторения"),
+  ).toHaveValue("10");
+  await expect(
+    bench.getByText("Значения последнего подхода подставлены"),
+  ).toBeVisible();
+  await noOverflow(page);
+});
+
+test("completed workout can be saved and edited as a routine", async ({
+  page,
+}) => {
+  const state = await mockAPI(page);
+  await page.goto("/#/history/1");
+  await page.getByRole("button", { name: "Сохранить как рутину" }).click();
+  await page.getByLabel("Название рутины").fill("Из истории");
+  await page.getByRole("button", { name: "Сохранить рутину" }).click();
+  await expect(page.getByText("Рутина сохранена")).toBeVisible();
+  expect(state.routines[0].planned_sets).toHaveLength(1);
+  await page.goto("/#/routines");
+  await expect(page.locator(".routine-card")).toContainText("Из истории");
+  await page
+    .locator(".routine-card")
+    .getByRole("button", { name: "Изменить" })
+    .click();
+  await page.getByLabel("Название рутины").fill("Новая версия");
+  await page.getByRole("button", { name: "Сохранить рутину" }).click();
+  expect(state.routines[0].name).toBe("Новая версия");
+  await page.getByRole("button", { name: "Удалить Новая версия" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Удалить рутину" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Пока нет рутин" }),
+  ).toBeVisible();
+});
+
 test("navigation, catalog filters, profile and responsive layout", async ({
   page,
 }, testInfo) => {

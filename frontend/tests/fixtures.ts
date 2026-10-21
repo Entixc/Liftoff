@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import type { Workout, WorkoutExercise, WorkoutSet } from "../src/api/workouts";
+import type { Routine } from "../src/api/routines";
 
 // Stateful fake API: browser tests never touch a real account or database.
 export async function mockAPI(page: Page, authenticated = true) {
@@ -70,6 +71,7 @@ export async function mockAPI(page: Page, authenticated = true) {
       position: 1,
     },
   ];
+  const routines: Routine[] = [];
   const state = {
     unauthorized: false,
     offline: false,
@@ -77,10 +79,12 @@ export async function mockAPI(page: Page, authenticated = true) {
     items,
     sets,
     history,
+    routines,
     profile,
   };
   let itemId = 2,
-    setId = 2;
+    setId = 2,
+    routineId = 1;
   if (authenticated)
     await page.addInitScript(() =>
       localStorage.setItem("access_token", "ui-test-token"),
@@ -111,6 +115,121 @@ export async function mockAPI(page: Page, authenticated = true) {
       return respond(profile);
     }
     if (path === "/exercises") return respond(exercises);
+    const lastSet = path.match(/^\/exercises\/(\d+)\/last-set$/);
+    if (lastSet) {
+      const matchingItems = items.filter(
+        (item) => item.exercise_id === Number(lastSet[1]),
+      );
+      const latest = sets
+        .filter((set) =>
+          matchingItems.some((item) => item.id === set.workout_exercise_id),
+        )
+        .sort((a, b) => b.id - a.id)[0];
+      return respond(latest ?? {}, latest ? 200 : 404);
+    }
+    if (path === "/routines" && method === "GET") return respond(routines);
+    if (path === "/routines" && method === "POST") {
+      const routine = {
+        id: routineId++,
+        name: body.name,
+        exercise_ids: body.exercise_ids,
+        planned_sets: (body.planned_sets ?? []).map(
+          (
+            item: {
+              exercise_id: number;
+              weight_kg: number | null;
+              repetitions: number;
+            },
+            index: number,
+            all: Array<{ exercise_id: number }>,
+          ) => ({
+            ...item,
+            weight_kg:
+              item.weight_kg === null
+                ? null
+                : Number(item.weight_kg).toFixed(2),
+            position:
+              all
+                .slice(0, index)
+                .filter((previous) => previous.exercise_id === item.exercise_id)
+                .length + 1,
+          }),
+        ),
+        created_at: new Date().toISOString(),
+      };
+      routines.unshift(routine);
+      return respond(routine, 201);
+    }
+    const routine = path.match(/^\/routines\/(\d+)(\/start)?$/);
+    if (routine) {
+      const id = Number(routine[1]);
+      const saved = routines.find((item) => item.id === id);
+      if (!saved) return respond({}, 404);
+      if (routine[2] && method === "POST") {
+        if (active) return respond({}, 409);
+        active = {
+          id: 4,
+          user_id: 1,
+          started_at: new Date().toISOString(),
+          finished_at: null,
+          status: "active",
+        };
+        saved.exercise_ids.forEach((exerciseId, index) => {
+          const item = {
+            id: itemId++,
+            workout_id: 4,
+            exercise_id: exerciseId,
+            position: index + 1,
+          };
+          items.push(item);
+          saved.planned_sets
+            .filter((planned) => planned.exercise_id === exerciseId)
+            .forEach((planned) =>
+              sets.push({
+                id: setId++,
+                workout_exercise_id: item.id,
+                weight_kg: planned.weight_kg,
+                repetitions: planned.repetitions,
+                is_completed: false,
+                position: planned.position,
+              }),
+            );
+        });
+        return respond(active, 201);
+      }
+      if (method === "PUT") {
+        Object.assign(saved, body, {
+          planned_sets: (body.planned_sets ?? []).map(
+            (
+              item: {
+                exercise_id: number;
+                weight_kg: number | null;
+                repetitions: number;
+              },
+              index: number,
+              all: Array<{ exercise_id: number }>,
+            ) => ({
+              ...item,
+              weight_kg:
+                item.weight_kg === null
+                  ? null
+                  : Number(item.weight_kg).toFixed(2),
+              position:
+                all
+                  .slice(0, index)
+                  .filter(
+                    (previous) => previous.exercise_id === item.exercise_id,
+                  ).length + 1,
+            }),
+          ),
+        });
+        return respond(saved);
+      }
+      if (method === "DELETE") {
+        routines.splice(routines.indexOf(saved), 1);
+        return route.fulfill({ status: 204 });
+      }
+    }
     if (path === "/workouts/active")
       return respond(active ?? {}, active ? 200 : 404);
     if (path === "/workouts/history") return respond(history);
@@ -123,6 +242,22 @@ export async function mockAPI(page: Page, authenticated = true) {
         status: "active",
       };
       return respond(active, 201);
+    }
+    const cancel = path.match(/^\/workouts\/(\d+)$/);
+    if (cancel && method === "DELETE") {
+      if (state.failDelete) return respond({}, 500);
+      if (!active || active.id !== Number(cancel[1])) return respond({}, 404);
+      const removedItems = items.filter(
+        (item) => item.workout_id === active?.id,
+      );
+      const removedIds = new Set(removedItems.map((item) => item.id));
+      for (let index = sets.length - 1; index >= 0; index--)
+        if (removedIds.has(sets[index].workout_exercise_id))
+          sets.splice(index, 1);
+      for (let index = items.length - 1; index >= 0; index--)
+        if (items[index].workout_id === active.id) items.splice(index, 1);
+      active = null;
+      return route.fulfill({ status: 204 });
     }
     const complete = path.match(/^\/workouts\/(\d+)\/complete$/);
     if (complete && active) {

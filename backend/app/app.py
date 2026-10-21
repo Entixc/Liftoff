@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.exercises import router as exercises_router
 from app.api.routes.sets import router as sets_router
 from app.api.routes.workout import router as workouts_router
+from app.api.routes.routines import router as routines_router
 from app.core.config import get_cors_origins
 
 
@@ -14,6 +15,7 @@ app.include_router(auth_router)
 app.include_router(exercises_router)
 app.include_router(workouts_router)
 app.include_router(sets_router)
+app.include_router(routines_router)
 
 app.add_middleware(
     CORSMiddleware,

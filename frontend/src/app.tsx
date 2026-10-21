@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMyProfile, type TokenResponse, type UserProfile } from "./api/auth";
 import { getExercises, type Exercise } from "./api/exercises";
+import { getRoutines, startRoutine, type Routine } from "./api/routines";
 import {
   getActiveWorkout,
   getWorkoutExercises,
@@ -14,6 +15,7 @@ import { ActiveWorkout, WorkoutTimer } from "./components/ActiveWorkout";
 import { ExerciseCatalog } from "./components/ExerciseCatalog";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
+import { Routines } from "./components/Routines";
 import { ProfileForm } from "./components/ProfileForm";
 import { WorkoutHistory } from "./components/WorkoutHistory";
 import { WorkoutHistoryDetails } from "./components/WorkoutHistoryDetails";
@@ -149,6 +151,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [active, setActive] = useState<Workout | null>(null);
   const [history, setHistory] = useState<Workout[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -166,13 +169,15 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
       getExercises(),
       getActiveWorkout(token),
       getWorkoutHistory(token),
+      getRoutines(token),
     ])
-      .then(([user, catalog, workout, records]) => {
+      .then(([user, catalog, workout, records, savedRoutines]) => {
         if (!cancelled) {
           setProfile(user);
           setExercises(catalog);
           setActive(workout);
           setHistory(records);
+          setRoutines(savedRoutines);
         }
       })
       .catch((e) => {
@@ -234,6 +239,18 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
           b.id - a.id,
       ),
     );
+  }
+  function updateRoutine(routine: Routine) {
+    setRoutines((current) => [
+      routine,
+      ...current.filter((item) => item.id !== routine.id),
+    ]);
+  }
+  async function launchRoutine(id: number) {
+    const workout = await startRoutine(token, id);
+    setActive(workout);
+    navigate("workout");
+    notify("Тренировка по рутине началась");
   }
   async function signOut() {
     if (
@@ -427,6 +444,11 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               Каталог упражнений
               <Icon name="arrow" size={16} />
             </a>
+            <a href="#/routines">
+              <Icon name="routine" />
+              Мои рутины
+              <Icon name="arrow" size={16} />
+            </a>
           </div>
         </>
       )}
@@ -449,6 +471,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               updateHistory(workout);
               navigate("history", workout.id);
             }}
+            onWorkoutCancelled={() => setActive(null)}
           />
         </>
       )}
@@ -462,6 +485,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               token={token}
               onClose={() => navigate("history")}
               onWorkoutUpdated={updateHistory}
+              onRoutineSaved={updateRoutine}
             />
           ) : (
             <ErrorState
@@ -486,6 +510,27 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
             </Panel>
           </>
         ))}
+      {page === "routines" && (
+        <>
+          <PageHeader
+            eyebrow="ТВОЙ ПЛАН"
+            title="Рутины"
+            description="Любимый набор упражнений всегда под рукой."
+            action={<Badge>Всего: {routines.length}</Badge>}
+          />
+          <Routines
+            token={token}
+            routines={routines}
+            exercises={exercises}
+            active={Boolean(active)}
+            onSaved={updateRoutine}
+            onDeleted={(id) =>
+              setRoutines((current) => current.filter((item) => item.id !== id))
+            }
+            onStart={launchRoutine}
+          />
+        </>
+      )}
       {page === "catalog" && (
         <>
           <PageHeader

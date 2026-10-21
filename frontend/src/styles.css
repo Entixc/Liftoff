@@ -274,7 +274,8 @@ input:focus-visible {
   font-weight: 500;
   color: #c0c9c1;
 }
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-width: 0;
   height: 46px;
@@ -714,7 +715,7 @@ input:focus-visible {
 .quick-actions {
   margin-top: 25px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 15px;
 }
 .quick-actions a {
@@ -1972,6 +1973,83 @@ input:focus-visible {
     margin-bottom: 30px;
   }
 }
+
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.session-actions .button {
+  flex: 1;
+}
+.routine-exercise-list li {
+  align-items: stretch;
+  flex-direction: column;
+}
+.routine-exercise-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.routine-exercise-heading strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.routine-set-editor {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #344237;
+}
+.routine-set-editor > .button {
+  justify-self: start;
+}
+.routine-set-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+.routine-set-row .button {
+  width: 42px;
+  height: 46px;
+  padding: 0;
+}
+.routine-card li {
+  margin-bottom: 8px;
+}
+.routine-card li strong {
+  display: block;
+  font-weight: 600;
+}
+.routine-set-summary {
+  display: block;
+  margin-top: 3px;
+  color: #9fb6a0;
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .session-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .session-actions .button {
+    min-width: 0;
+  }
+}
+@media (max-width: 480px) {
+  .routine-set-row {
+    gap: 6px;
+  }
+  .routine-set-row .field {
+    font-size: 10px;
+  }
+  .routine-set-row .field input {
+    padding-inline: 7px;
+  }
+}
 @media (max-width: 480px) {
   .topbar {
     padding-inline: 16px;
@@ -2265,5 +2343,135 @@ input:focus-visible {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+}
+
+.routines-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.routines-toolbar .muted {
+  max-width: 680px;
+  line-height: 1.6;
+}
+.routines-toolbar .button {
+  flex-shrink: 0;
+}
+.routine-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.routine-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.routine-card h2 {
+  font-size: 20px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.routine-card > .muted {
+  margin: 0;
+  font-size: 12px;
+}
+.routine-card ul {
+  padding-left: 18px;
+  margin: 4px 0 12px;
+  color: #c2cec1;
+  line-height: 1.8;
+}
+.routine-card .routine-actions {
+  margin-top: auto;
+}
+.routine-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.routine-editor {
+  max-width: 760px;
+  margin-bottom: 24px;
+}
+.routine-editor form,
+.routine-from-history form {
+  display: grid;
+  gap: 18px;
+}
+.routine-editor .field select {
+  cursor: pointer;
+}
+.routine-exercise-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.routine-exercise-list li {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #202923;
+  color: #dce8db;
+}
+.routine-exercise-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.routine-reorder {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.routine-reorder button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #3a503e;
+  border-radius: 7px;
+  background: #29382d;
+  color: #d7e8d4;
+  cursor: pointer;
+}
+.routine-reorder button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.routine-from-history {
+  margin-bottom: 24px;
+}
+.routine-from-history h2 {
+  font-size: 19px;
+}
+.routine-from-history .button {
+  justify-self: start;
+}
+@media (max-width: 1199px) and (min-width: 481px) {
+  .quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .routines-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .routine-grid {
+    grid-template-columns: 1fr;
+  }
+  .details-toolbar {
+    flex-wrap: wrap;
   }
 }

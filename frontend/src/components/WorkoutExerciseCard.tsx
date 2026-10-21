@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Exercise } from "../api/exercises";
+import { getLastSet, type Exercise } from "../api/exercises";
 import {
   createWorkoutSet,
   deleteWorkoutSet,
@@ -178,6 +178,7 @@ export function WorkoutExerciseCard({
   const [reload, setReload] = useState(0);
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("10");
+  const [hasPrevious, setHasPrevious] = useState(false);
   const [adding, setAdding] = useState(false);
   const [operations, setOperations] = useState(0);
   const { notify } = useUI();
@@ -191,9 +192,25 @@ export function WorkoutExerciseCard({
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    getWorkoutSets(token, workoutId, workoutExercise.id)
-      .then((value) => {
-        if (!cancelled) setSets(value);
+    Promise.all([
+      getWorkoutSets(token, workoutId, workoutExercise.id),
+      readOnly
+        ? Promise.resolve(null)
+        : getLastSet(token, workoutExercise.exercise_id),
+    ])
+      .then(([value, previous]) => {
+        if (!cancelled) {
+          setSets(value);
+          if (previous) {
+            setWeight(previous.weight_kg ?? "");
+            setReps(String(previous.repetitions));
+            setHasPrevious(true);
+          } else {
+            setWeight("");
+            setReps("10");
+            setHasPrevious(false);
+          }
+        }
       })
       .catch((e) => {
         if (!cancelled)
@@ -222,6 +239,9 @@ export function WorkoutExerciseCard({
         },
       );
       setSets((current) => [...current, value]);
+      setWeight(value.weight_kg ?? "");
+      setReps(String(value.repetitions));
+      setHasPrevious(true);
       notify("Подход добавлен");
     } catch (e) {
       setError(
@@ -322,34 +342,41 @@ export function WorkoutExerciseCard({
             <p className="no-sets muted">Подходов пока нет.</p>
           )}
           {!readOnly && (
-            <form className="add-set-form" onSubmit={add}>
-              <Input
-                label={bodyweight ? "Доп. вес, кг" : "Вес, кг"}
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                max="999.99"
-                step="0.01"
-                required={!bodyweight}
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder={bodyweight ? "Необязательно" : "60"}
-              />
-              <Input
-                label="Повторения"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                step="1"
-                required
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-              />
-              <Button type="submit" disabled={adding}>
-                <Icon name="plus" size={18} />
-                {adding ? "Добавляем…" : "Добавить подход"}
-              </Button>
-            </form>
+            <>
+              {hasPrevious && (
+                <p className="field-hint">
+                  Значения последнего подхода подставлены. Можешь изменить их.
+                </p>
+              )}
+              <form className="add-set-form" onSubmit={add}>
+                <Input
+                  label={bodyweight ? "Доп. вес, кг" : "Вес, кг"}
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  max="999.99"
+                  step="0.01"
+                  required={!bodyweight}
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder={bodyweight ? "Необязательно" : "60"}
+                />
+                <Input
+                  label="Повторения"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  step="1"
+                  required
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                />
+                <Button type="submit" disabled={adding}>
+                  <Icon name="plus" size={18} />
+                  {adding ? "Добавляем…" : "Добавить подход"}
+                </Button>
+              </form>
+            </>
           )}
         </>
       )}

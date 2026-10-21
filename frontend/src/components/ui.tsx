@@ -12,6 +12,7 @@ import {
 export type IconName =
   | "home"
   | "workout"
+  | "routine"
   | "history"
   | "catalog"
   | "user"
@@ -38,6 +39,12 @@ const paths: Record<IconName, ReactNode> = {
   workout: (
     <>
       <path d="m6 5 13 13M4 8l4-4M2 6l4-4m10 18 4-4m-2 6 4-4M6 10l4-4m4 12 4-4" />
+    </>
+  ),
+  routine: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <path d="m8 10 2 2 4-4M8 16h8" />
     </>
   ),
   history: (

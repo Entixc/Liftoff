@@ -5,6 +5,7 @@ import { Badge, Icon, type IconName } from "./ui";
 export const pages = [
   { id: "home", title: "Главная", icon: "home" },
   { id: "workout", title: "Тренировка", icon: "workout" },
+  { id: "routines", title: "Рутины", icon: "routine" },
   { id: "history", title: "История", icon: "history" },
   { id: "catalog", title: "Упражнения", icon: "catalog" },
   { id: "profile", title: "Профиль", icon: "user" },

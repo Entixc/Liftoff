@@ -74,6 +74,17 @@ export async function startWorkout(token: string): Promise<Workout> {
   return response.json() as Promise<Workout>;
 }
 
+export async function cancelWorkout(
+  token: string,
+  workoutId: number,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/workouts/${workoutId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Не удалось отменить тренировку");
+}
+
 export async function completeWorkout(
   token: string,
   workoutId: number,
