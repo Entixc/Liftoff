@@ -24,6 +24,11 @@ export type UpdateProfilePayload = {
   body_weight_kg?: number | null;
 };
 
+export type ChangePasswordPayload = {
+  current_password: string;
+  new_password: string;
+};
+
 export type BodyWeightEntry = {
   id: number;
   weight_kg: string;
@@ -108,4 +113,15 @@ export async function updateMyProfile(
   }
 
   return response.json() as Promise<UserProfile>;
+}
+
+export async function changePassword(
+  payload: ChangePasswordPayload,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/me/password`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new ApiError(response.status);
 }

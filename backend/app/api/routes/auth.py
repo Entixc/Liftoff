@@ -9,7 +9,14 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.core.config import get_session_cookie_secure
-from app.core.sessions import SESSION_COOKIE_NAME, SESSION_ABSOLUTE_TIMEOUT, create_session, require_trusted_origin, revoke_session
+from app.core.sessions import (
+    SESSION_ABSOLUTE_TIMEOUT,
+    SESSION_COOKIE_NAME,
+    create_session,
+    require_trusted_origin,
+    revoke_other_user_sessions,
+    revoke_session,
+)
 from app.db.session import get_db
 from app.models.user import User
 from app.models.body_weight_entry import BodyWeightEntry
@@ -21,6 +28,7 @@ from app.schemas.auth import (
     UpdateProfileRequest,
     UserResponse,
     BodyWeightEntryResponse,
+    ChangePasswordRequest,
 )
 
 router = APIRouter(
@@ -79,6 +87,36 @@ def update_my_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_my_password(
+    password_request: ChangePasswordRequest,
+    http_request: Request,
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> None:
+    if not verify_password(
+        password_request.current_password,
+        current_user.password_hash,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    if verify_password(password_request.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must differ from current password",
+        )
+
+    current_user.password_hash = hash_password(password_request.new_password)
+    revoke_other_user_sessions(
+        db,
+        current_user.id,
+        http_request.cookies.get(SESSION_COOKIE_NAME),
+    )
+    db.commit()
 
 
 @router.post(

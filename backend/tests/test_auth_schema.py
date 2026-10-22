@@ -6,10 +6,29 @@ from pydantic import ValidationError
 
 from app.models.user import User
 from app.schemas.auth import (
+    ChangePasswordRequest,
     RegisterRequest,
     UpdateProfileRequest,
     UserResponse,
 )
+
+
+def test_change_password_request_accepts_valid_data() -> None:
+    request = ChangePasswordRequest(
+        current_password="strongpass",
+        new_password="newstrongpass",
+    )
+
+    assert request.current_password == "strongpass"
+    assert request.new_password == "newstrongpass"
+
+
+def test_change_password_request_rejects_short_new_password() -> None:
+    with pytest.raises(ValidationError):
+        ChangePasswordRequest(
+            current_password="strongpass",
+            new_password="short",
+        )
 
 
 def test_register_request_accepts_valid_data() -> None:

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.sessions import SESSION_COOKIE_NAME, hash_session_token
+from app.app import app
 from app.models.user_session import UserSession
 
 
@@ -74,3 +75,78 @@ def test_browser_login_preflight_allows_session_header(client: TestClient) -> No
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-credentials"] == "true"
+
+
+def test_change_password_requires_current_password(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    sign_in(client)
+
+    response = client.patch(
+        "/auth/me/password",
+        headers=ORIGIN,
+        json={
+            "current_password": "wrongpass",
+            "new_password": "newstrongpass",
+        },
+    )
+
+    assert response.status_code == 400
+    same_password_response = client.patch(
+        "/auth/me/password",
+        headers=ORIGIN,
+        json={
+            "current_password": "strongpass",
+            "new_password": "strongpass",
+        },
+    )
+    assert same_password_response.status_code == 400
+    client.cookies.clear()
+    assert client.post(
+        "/auth/login",
+        headers=ORIGIN,
+        json={"nickname": "nurzhan", "password": "strongpass"},
+    ).status_code == 200
+
+
+def test_change_password_keeps_current_and_revokes_other_sessions(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    sign_in(client)
+    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+
+    with TestClient(app) as other_client:
+        assert other_client.post(
+            "/auth/login",
+            headers=ORIGIN,
+            json=credentials,
+        ).status_code == 200
+        assert len(db_session.scalars(select(UserSession)).all()) == 2
+
+        response = client.patch(
+            "/auth/me/password",
+            headers=ORIGIN,
+            json={
+                "current_password": "strongpass",
+                "new_password": "newstrongpass",
+            },
+        )
+
+        assert response.status_code == 204
+        assert client.get("/auth/me").status_code == 200
+        assert other_client.get("/auth/me").status_code == 401
+        assert len(db_session.scalars(select(UserSession)).all()) == 1
+
+    client.cookies.clear()
+    assert client.post(
+        "/auth/login",
+        headers=ORIGIN,
+        json=credentials,
+    ).status_code == 401
+    assert client.post(
+        "/auth/login",
+        headers=ORIGIN,
+        json={"nickname": "nurzhan", "password": "newstrongpass"},
+    ).status_code == 200

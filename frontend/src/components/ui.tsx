@@ -28,6 +28,7 @@ export type IconName =
   | "search"
   | "edit"
   | "eye"
+  | "lock"
   | "leaf";
 const paths: Record<IconName, ReactNode> = {
   home: (
@@ -110,6 +111,12 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
     </>
   ),
   leaf: (

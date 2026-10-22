@@ -230,6 +230,18 @@ test("registration, password toggle, login failure and success", async ({
     page.getByRole("heading", { name: "Привет, nurzhan." }),
   ).toBeVisible();
   await page.goto("/#/profile");
+  await page.getByLabel("Текущий пароль").fill("testpassword");
+  await page.getByLabel("Новый пароль", { exact: true }).fill("newpassword");
+  await page.getByLabel("Повтори новый пароль").fill("different");
+  await page.getByRole("button", { name: "Сменить пароль" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Новые пароли не совпадают.",
+  );
+  await page.getByLabel("Повтори новый пароль").fill("newpassword");
+  await page.getByRole("button", { name: "Сменить пароль" }).click();
+  await expect(
+    page.getByText("Пароль изменён. Другие сессии завершены"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await page
     .getByRole("dialog")
@@ -238,6 +250,21 @@ test("registration, password toggle, login failure and success", async ({
   await expect(
     page.getByRole("button", { name: "Войти", exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Никнейм", { exact: true }).fill("nurzhan");
+  await page.getByLabel("Пароль", { exact: true }).fill("testpassword");
+  await page.getByRole("button", { name: "Войти", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Неверный никнейм");
+  await page.getByLabel("Пароль", { exact: true }).fill("newpassword");
+  await page.getByRole("button", { name: "Войти", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Привет, nurzhan." }),
+  ).toBeVisible();
+  await page.goto("/#/profile");
+  await page.getByRole("button", { name: "Выйти", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Выйти", exact: true })
+    .click();
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Войти", exact: true }),

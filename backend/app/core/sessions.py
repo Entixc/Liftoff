@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Request, status
 
@@ -57,6 +57,19 @@ def revoke_session(db: Session, token: str) -> None:
     if row is not None:
         db.delete(row)
         db.commit()
+
+
+def revoke_other_user_sessions(
+    db: Session,
+    user_id: int,
+    current_token: str | None,
+) -> None:
+    statement = delete(UserSession).where(UserSession.user_id == user_id)
+    if current_token:
+        statement = statement.where(
+            UserSession.token_hash != hash_session_token(current_token)
+        )
+    db.execute(statement)
 
 
 def require_trusted_origin(request: Request) -> None:

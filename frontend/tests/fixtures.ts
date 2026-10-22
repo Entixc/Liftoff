@@ -89,6 +89,7 @@ export async function mockAPI(page: Page, authenticated = true) {
   let itemId = 2,
     setId = 2,
     routineId = 1;
+  let accountPassword = "testpassword";
   await page.route("**/mock-api/**", async (route) => {
     if (state.offline) {
       await route.abort("connectionrefused");
@@ -103,7 +104,7 @@ export async function mockAPI(page: Page, authenticated = true) {
     if (state.unauthorized && !["/auth/login", "/auth/register"].includes(path))
       return respond({ detail: "Not authenticated" }, 401);
     if (path === "/auth/login") {
-      if (body.password === "wrongpassword") return respond({}, 401);
+      if (body.password !== accountPassword) return respond({}, 401);
       state.sessionAuthenticated = true;
       return respond({ authenticated: true });
     }
@@ -116,6 +117,12 @@ export async function mockAPI(page: Page, authenticated = true) {
       return respond({ ...profile, nickname: body.nickname }, 201);
     }
     if (path === "/auth/me/weight-history") return respond(weightEntries);
+    if (path === "/auth/me/password" && method === "PATCH") {
+      if (body.current_password !== accountPassword) return respond({}, 400);
+      if (body.new_password === accountPassword) return respond({}, 400);
+      accountPassword = body.new_password;
+      return route.fulfill({ status: 204, body: "" });
+    }
     if (path === "/auth/me") {
       if (!state.sessionAuthenticated)
         return respond({ detail: "Not authenticated" }, 401);

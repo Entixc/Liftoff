@@ -31,6 +31,7 @@ import { WorkoutHistory } from "./components/WorkoutHistory";
 import { WorkoutHistoryDetails } from "./components/WorkoutHistoryDetails";
 import { ProgressAnalytics } from "./components/ProgressAnalytics";
 import { BodyWeightTrend } from "./components/BodyWeightTrend";
+import { ChangePasswordForm } from "./components/ChangePasswordForm";
 import {
   Badge,
   Button,
@@ -627,6 +628,7 @@ function SessionApp({ logout }: { logout: () => void }) {
                     .catch(() => {});
                 }}
               />
+              <ChangePasswordForm />
               <Panel>
                 <div className="section-heading">
                   <div>
