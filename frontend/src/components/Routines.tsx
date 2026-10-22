@@ -7,7 +7,6 @@ import { Button, EmptyState, Icon, Input, Panel, useUI } from "./ui";
 type SetDraft = { key: number; weight: string; repetitions: string };
 
 export function Routines({
-  token,
   routines,
   exercises,
   active,
@@ -15,7 +14,6 @@ export function Routines({
   onDeleted,
   onStart,
 }: {
-  token: string;
   routines: Routine[];
   exercises: Exercise[];
   active: boolean;
@@ -96,7 +94,6 @@ export function Routines({
     setError(null);
     try {
       const saved = await saveRoutine(
-        token,
         {
           name: name.trim(),
           exercise_ids: ids,
@@ -132,7 +129,7 @@ export function Routines({
     setBusy(true);
     setError(null);
     try {
-      await deleteRoutine(token, routine.id);
+      await deleteRoutine(routine.id);
       onDeleted(routine.id);
       notify("Рутина удалена");
     } catch (e) {

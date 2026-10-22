@@ -8,14 +8,9 @@ export async function apiFetch(
   url: string,
   options?: RequestInit,
 ): Promise<Response> {
-  const headers = new Headers(options?.headers);
-  // Existing API callers still accept a token argument during the transition.
-  // The browser never sends or stores that legacy Bearer token.
-  headers.delete("Authorization");
   const response = await fetch(url, {
     ...options,
     credentials: "include",
-    headers,
   });
   if (
     response.status === 401 &&

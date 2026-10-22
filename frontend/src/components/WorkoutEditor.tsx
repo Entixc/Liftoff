@@ -20,13 +20,11 @@ import {
 } from "./ui";
 
 export function WorkoutEditor({
-  token,
   workoutId,
   exercises,
   readOnly = false,
   onBusy,
 }: {
-  token: string;
   workoutId: number;
   exercises: Exercise[];
   readOnly?: boolean;
@@ -44,7 +42,7 @@ export function WorkoutEditor({
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    getWorkoutExercises(token, workoutId)
+    getWorkoutExercises(workoutId)
       .then((value) => {
         if (!cancelled) setItems(value);
       })
@@ -58,13 +56,13 @@ export function WorkoutEditor({
     return () => {
       cancelled = true;
     };
-  }, [token, workoutId, reload]);
+  }, [workoutId, reload]);
   async function add(exercise: Exercise) {
     setAdding(true);
     onBusy(1);
     setError(null);
     try {
-      const item = await addExerciseToWorkout(token, workoutId, exercise.id);
+      const item = await addExerciseToWorkout(workoutId, exercise.id);
       setItems((current) => [...current, item]);
       notify(`${exercise.name} добавлено`);
     } catch (e) {
@@ -82,7 +80,7 @@ export function WorkoutEditor({
   async function remove(id: number) {
     onBusy(1);
     try {
-      await deleteExerciseFromWorkout(token, workoutId, id);
+      await deleteExerciseFromWorkout(workoutId, id);
       setItems((current) => current.filter((item) => item.id !== id));
     } finally {
       onBusy(-1);
@@ -110,7 +108,6 @@ export function WorkoutEditor({
           {items.map((item) => (
             <WorkoutExerciseCard
               key={item.id}
-              token={token}
               workoutId={workoutId}
               workoutExercise={item}
               exercise={byId.get(item.exercise_id)}

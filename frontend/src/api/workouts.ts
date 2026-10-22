@@ -49,20 +49,14 @@ export type ProgressSet = {
   repetitions: number;
 };
 
-export async function getWorkoutProgress(token: string): Promise<ProgressSet[]> {
-  const response = await fetch(`${API_URL}/workouts/progress`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getWorkoutProgress(): Promise<ProgressSet[]> {
+  const response = await fetch(`${API_URL}/workouts/progress`);
   if (!response.ok) throw new Error("Не удалось загрузить прогресс");
   return response.json() as Promise<ProgressSet[]>;
 }
 
-export async function getActiveWorkout(token: string): Promise<Workout | null> {
-  const response = await fetch(`${API_URL}/workouts/active`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getActiveWorkout(): Promise<Workout | null> {
+  const response = await fetch(`${API_URL}/workouts/active`);
 
   if (response.status === 404) {
     return null;
@@ -75,12 +69,9 @@ export async function getActiveWorkout(token: string): Promise<Workout | null> {
   return response.json() as Promise<Workout>;
 }
 
-export async function startWorkout(token: string): Promise<Workout> {
+export async function startWorkout(): Promise<Workout> {
   const response = await fetch(`${API_URL}/workouts`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -91,25 +82,19 @@ export async function startWorkout(token: string): Promise<Workout> {
 }
 
 export async function cancelWorkout(
-  token: string,
   workoutId: number,
 ): Promise<void> {
   const response = await fetch(`${API_URL}/workouts/${workoutId}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) throw new Error("Не удалось отменить тренировку");
 }
 
 export async function completeWorkout(
-  token: string,
   workoutId: number,
 ): Promise<Workout> {
   const response = await fetch(`${API_URL}/workouts/${workoutId}/complete`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -120,14 +105,12 @@ export async function completeWorkout(
 }
 
 export async function updateWorkoutTime(
-  token: string,
   workoutId: number,
   payload: UpdateWorkoutTimePayload,
 ): Promise<Workout> {
   const response = await fetch(`${API_URL}/workouts/${workoutId}/time`, {
     method: "PATCH",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -140,12 +123,8 @@ export async function updateWorkoutTime(
   return response.json() as Promise<Workout>;
 }
 
-export async function getWorkoutHistory(token: string): Promise<Workout[]> {
-  const response = await fetch(`${API_URL}/workouts/history`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getWorkoutHistory(): Promise<Workout[]> {
+  const response = await fetch(`${API_URL}/workouts/history`);
 
   if (!response.ok) {
     throw new Error("Не удалось загрузить историю тренировок");
@@ -155,14 +134,9 @@ export async function getWorkoutHistory(token: string): Promise<Workout[]> {
 }
 
 export async function getWorkoutExercises(
-  token: string,
   workoutId: number,
 ): Promise<WorkoutExercise[]> {
-  const response = await fetch(`${API_URL}/workouts/${workoutId}/exercises`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await fetch(`${API_URL}/workouts/${workoutId}/exercises`);
 
   if (!response.ok) {
     throw new Error("Не удалось загрузить упражнения тренировки");
@@ -172,14 +146,12 @@ export async function getWorkoutExercises(
 }
 
 export async function addExerciseToWorkout(
-  token: string,
   workoutId: number,
   exerciseId: number,
 ): Promise<WorkoutExercise> {
   const response = await fetch(`${API_URL}/workouts/${workoutId}/exercises`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ exercise_id: exerciseId }),
@@ -193,7 +165,6 @@ export async function addExerciseToWorkout(
 }
 
 export async function deleteExerciseFromWorkout(
-  token: string,
   workoutId: number,
   workoutExerciseId: number,
 ): Promise<void> {
@@ -201,9 +172,6 @@ export async function deleteExerciseFromWorkout(
     `${API_URL}/workouts/${workoutId}/exercises/${workoutExerciseId}`,
     {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     },
   );
 
@@ -217,15 +185,10 @@ function setsUrl(workoutId: number, workoutExerciseId: number): string {
 }
 
 export async function getWorkoutSets(
-  token: string,
   workoutId: number,
   workoutExerciseId: number,
 ): Promise<WorkoutSet[]> {
-  const response = await fetch(setsUrl(workoutId, workoutExerciseId), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await fetch(setsUrl(workoutId, workoutExerciseId));
 
   if (!response.ok) {
     throw new Error("Не удалось загрузить подходы");
@@ -235,7 +198,6 @@ export async function getWorkoutSets(
 }
 
 export async function createWorkoutSet(
-  token: string,
   workoutId: number,
   workoutExerciseId: number,
   payload: CreateWorkoutSetPayload,
@@ -243,7 +205,6 @@ export async function createWorkoutSet(
   const response = await fetch(setsUrl(workoutId, workoutExerciseId), {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -257,7 +218,6 @@ export async function createWorkoutSet(
 }
 
 export async function updateWorkoutSet(
-  token: string,
   workoutId: number,
   workoutExerciseId: number,
   setId: number,
@@ -268,7 +228,6 @@ export async function updateWorkoutSet(
     {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -283,7 +242,6 @@ export async function updateWorkoutSet(
 }
 
 export async function deleteWorkoutSet(
-  token: string,
   workoutId: number,
   workoutExerciseId: number,
   setId: number,
@@ -292,9 +250,6 @@ export async function deleteWorkoutSet(
     `${setsUrl(workoutId, workoutExerciseId)}/${setId}`,
     {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     },
   );
 

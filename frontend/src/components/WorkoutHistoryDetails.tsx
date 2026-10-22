@@ -27,14 +27,12 @@ function durationParts(workout: Workout) {
 }
 export function WorkoutHistoryDetails({
   exercises,
-  token,
   workout,
   onClose,
   onWorkoutUpdated,
   onRoutineSaved,
 }: {
   exercises: Exercise[];
-  token: string;
   workout: Workout;
   onClose: () => void;
   onWorkoutUpdated: (workout: Workout) => void;
@@ -56,17 +54,17 @@ export function WorkoutHistoryDetails({
     setRoutineSaving(true);
     setRoutineError(null);
     try {
-      const workoutExercises = await getWorkoutExercises(token, workout.id);
+      const workoutExercises = await getWorkoutExercises(workout.id);
       if (!workoutExercises.length) {
         setRoutineError("В тренировке нет упражнений для рутины.");
         return;
       }
       const sets = await Promise.all(
         workoutExercises.map((item) =>
-          getWorkoutSets(token, workout.id, item.id),
+          getWorkoutSets(workout.id, item.id),
         ),
       );
-      const saved = await saveRoutine(token, {
+      const saved = await saveRoutine({
         name: routineName.trim(),
         exercise_ids: workoutExercises.map((item) => item.exercise_id),
         planned_sets: workoutExercises.flatMap((item, index) =>
@@ -106,7 +104,7 @@ export function WorkoutHistoryDetails({
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateWorkoutTime(token, workout.id, {
+      const updated = await updateWorkoutTime(workout.id, {
         started_at: started.toISOString(),
         duration_minutes: durationMinutes,
       });
@@ -256,7 +254,6 @@ export function WorkoutHistoryDetails({
         </Panel>
       )}
       <WorkoutEditor
-        token={token}
         workoutId={workout.id}
         exercises={exercises}
         readOnly={!editing}

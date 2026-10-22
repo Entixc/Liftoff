@@ -25,47 +25,35 @@ export type RoutinePayload = Pick<Routine, "name" | "exercise_ids"> & {
   }>;
 };
 
-function headers(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
-}
-
-export async function getRoutines(token: string): Promise<Routine[]> {
-  const response = await fetch(`${API_URL}/routines`, {
-    headers: headers(token),
-  });
+export async function getRoutines(): Promise<Routine[]> {
+  const response = await fetch(`${API_URL}/routines`);
   if (!response.ok) throw new ApiError(response.status);
   return response.json() as Promise<Routine[]>;
 }
 
 export async function saveRoutine(
-  token: string,
   payload: RoutinePayload,
   id?: number,
 ): Promise<Routine> {
   const response = await fetch(`${API_URL}/routines${id ? `/${id}` : ""}`, {
     method: id ? "PUT" : "POST",
-    headers: { ...headers(token), "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new ApiError(response.status);
   return response.json() as Promise<Routine>;
 }
 
-export async function deleteRoutine(token: string, id: number): Promise<void> {
+export async function deleteRoutine(id: number): Promise<void> {
   const response = await fetch(`${API_URL}/routines/${id}`, {
     method: "DELETE",
-    headers: headers(token),
   });
   if (!response.ok) throw new ApiError(response.status);
 }
 
-export async function startRoutine(
-  token: string,
-  id: number,
-): Promise<Workout> {
+export async function startRoutine(id: number): Promise<Workout> {
   const response = await fetch(`${API_URL}/routines/${id}/start`, {
     method: "POST",
-    headers: headers(token),
   });
   if (!response.ok) throw new ApiError(response.status);
   return response.json() as Promise<Workout>;

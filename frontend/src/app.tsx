@@ -159,7 +159,7 @@ function AuthScreen({
     </div>
   );
 }
-function SessionApp({ token, logout }: { token: string; logout: () => void }) {
+function SessionApp({ logout }: { logout: () => void }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [active, setActive] = useState<Workout | null>(null);
@@ -182,13 +182,13 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
     setLoading(true);
     setError(null);
     Promise.all([
-      getMyProfile(token),
+      getMyProfile(),
       getExercises(),
-      getActiveWorkout(token),
-      getWorkoutHistory(token),
-      getWorkoutProgress(token),
-      getBodyWeightHistory(token),
-      getRoutines(token),
+      getActiveWorkout(),
+      getWorkoutHistory(),
+      getWorkoutProgress(),
+      getBodyWeightHistory(),
+      getRoutines(),
     ])
       .then(
         ([
@@ -226,12 +226,12 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [token, reload]);
+  }, [reload]);
   useEffect(() => {
     let cancelled = false;
     setActiveCount(null);
     if (active && page === "home")
-      getWorkoutExercises(token, active.id)
+      getWorkoutExercises(active.id)
         .then((items) => {
           if (!cancelled) setActiveCount(items.length);
         })
@@ -239,7 +239,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [active, page, token]);
+  }, [active, page]);
   async function start() {
     if (active) {
       navigate("workout");
@@ -248,7 +248,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
     setStarting(true);
     setStartError(null);
     try {
-      setActive(await startWorkout(token));
+      setActive(await startWorkout());
       navigate("workout");
       notify("Тренировка началась");
     } catch (e) {
@@ -270,7 +270,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
           b.id - a.id,
       ),
     );
-    void getWorkoutProgress(token)
+    void getWorkoutProgress()
       .then(setProgress)
       .catch(() => {});
   }
@@ -281,7 +281,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
     ]);
   }
   async function launchRoutine(id: number) {
-    const workout = await startRoutine(token, id);
+    const workout = await startRoutine(id);
     setActive(workout);
     navigate("workout");
     notify("Тренировка по рутине началась");
@@ -503,7 +503,6 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
             key={active?.id ?? "empty"}
             workout={active}
             exercises={exercises}
-            token={token}
             onStart={() => void start()}
             starting={starting}
             onWorkoutCompleted={(workout) => {
@@ -522,7 +521,6 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               key={selectedWorkout.id}
               workout={selectedWorkout}
               exercises={exercises}
-              token={token}
               onClose={() => {
                 navigate("history");
                 setReload((value) => value + 1);
@@ -567,7 +565,6 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
             action={<Badge>Всего: {routines.length}</Badge>}
           />
           <Routines
-            token={token}
             routines={routines}
             exercises={exercises}
             active={Boolean(active)}
@@ -584,7 +581,6 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
           <ExerciseDetails
             key={catalogId}
             exerciseId={catalogId}
-            token={token}
             onBack={() => navigate("catalog")}
           />
         ) : (
@@ -624,10 +620,9 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
             <div className="profile-settings">
               <ProfileForm
                 profile={profile}
-                token={token}
                 onProfileUpdated={(updated) => {
                   setProfile(updated);
-                  void getBodyWeightHistory(token)
+                  void getBodyWeightHistory()
                     .then(setBodyWeightHistory)
                     .catch(() => {});
                 }}
@@ -654,19 +649,25 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   );
 }
 function AppContent() {
-  const [token, setToken] = useState<"checking" | "session" | null>("checking");
+  const [session, setSession] = useState<
+    "checking" | "authenticated" | null
+  >("checking");
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
     localStorage.removeItem("access_token");
     void restoreSession()
-      .then((authenticated) => setToken(authenticated ? "session" : null))
+      .then((authenticated) =>
+        setSession(authenticated ? "authenticated" : null),
+      )
       .catch((error: unknown) => {
-        setToken(
-          error instanceof ApiError && error.status === 401 ? null : "session",
+        setSession(
+          error instanceof ApiError && error.status === 401
+            ? null
+            : "authenticated",
         );
       });
     function expired() {
-      setToken(null);
+      setSession(null);
       setMessage("Сессия истекла. Войди снова — тренировки сохранены.");
     }
     window.addEventListener("session-expired", expired);
@@ -674,16 +675,14 @@ function AppContent() {
       window.removeEventListener("session-expired", expired);
     };
   }, []);
-  return token === "checking" ? (
+  return session === "checking" ? (
     <LoadingState />
-  ) : token ? (
+  ) : session ? (
     <SessionApp
-      key={token}
-      token={token}
       logout={() => {
         void logoutSession()
           .then(() => {
-            setToken(null);
+            setSession(null);
             setMessage(null);
             navigate("home");
           })
@@ -696,7 +695,7 @@ function AppContent() {
     <AuthScreen
       message={message}
       onLogin={() => {
-        setToken("session");
+        setSession("authenticated");
         setMessage(null);
       }}
     />

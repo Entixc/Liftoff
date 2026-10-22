@@ -5,11 +5,9 @@ import { Button, Icon, Input, Panel, useUI } from "./ui";
 
 export function ProfileForm({
   profile,
-  token,
   onProfileUpdated,
 }: {
   profile: UserProfile;
-  token: string;
   onProfileUpdated: (profile: UserProfile) => void;
 }) {
   const [height, setHeight] = useState(profile.height_cm?.toString() ?? "");
@@ -23,7 +21,7 @@ export function ProfileForm({
     setError(null);
     try {
       onProfileUpdated(
-        await updateMyProfile(token, {
+        await updateMyProfile({
           height_cm: height === "" ? null : Number(height),
           body_weight_kg: weight === "" ? null : Number(weight),
         }),

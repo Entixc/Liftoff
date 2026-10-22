@@ -45,12 +45,9 @@ export async function getExerciseDetail(
 }
 
 export async function getExerciseHistory(
-  token: string,
   exerciseId: number,
 ): Promise<ExerciseHistory> {
-  const response = await fetch(`${API_URL}/exercises/${exerciseId}/history`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await fetch(`${API_URL}/exercises/${exerciseId}/history`);
   if (!response.ok) throw new Error("Не удалось загрузить историю упражнения");
   return response.json() as Promise<ExerciseHistory>;
 }
@@ -66,12 +63,9 @@ export async function getExercises(): Promise<Exercise[]> {
 }
 
 export async function getLastSet(
-  token: string,
   exerciseId: number,
 ): Promise<WorkoutSet | null> {
-  const response = await fetch(`${API_URL}/exercises/${exerciseId}/last-set`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await fetch(`${API_URL}/exercises/${exerciseId}/last-set`);
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("Не удалось загрузить последний подход");
   return response.json() as Promise<WorkoutSet>;

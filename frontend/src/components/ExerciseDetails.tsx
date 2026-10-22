@@ -51,11 +51,9 @@ function WorkoutEntry({
 
 export function ExerciseDetails({
   exerciseId,
-  token,
   onBack,
 }: {
   exerciseId: number;
-  token: string;
   onBack: () => void;
 }) {
   const [detail, setDetail] = useState<ExerciseDetail | null>(null);
@@ -69,7 +67,7 @@ export function ExerciseDetails({
     setError(null);
     Promise.all([
       getExerciseDetail(exerciseId),
-      getExerciseHistory(token, exerciseId),
+      getExerciseHistory(exerciseId),
     ])
       .then(([exercise, workouts]) => {
         if (!cancelled) {
@@ -84,7 +82,7 @@ export function ExerciseDetails({
     return () => {
       cancelled = true;
     };
-  }, [exerciseId, token, reload]);
+  }, [exerciseId, reload]);
   if (error)
     return (
       <ErrorState

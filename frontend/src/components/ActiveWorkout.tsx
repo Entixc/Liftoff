@@ -29,7 +29,6 @@ export function WorkoutTimer({ startedAt }: { startedAt: string }) {
 export function ActiveWorkout({
   workout,
   exercises,
-  token,
   onStart,
   starting,
   onWorkoutCompleted,
@@ -37,7 +36,6 @@ export function ActiveWorkout({
 }: {
   workout: Workout | null;
   exercises: Exercise[];
-  token: string;
   onStart: () => void;
   starting: boolean;
   onWorkoutCompleted: (workout: Workout) => void;
@@ -62,7 +60,7 @@ export function ActiveWorkout({
     setCompleting(true);
     setError(null);
     try {
-      onWorkoutCompleted(await completeWorkout(token, workout.id));
+      onWorkoutCompleted(await completeWorkout(workout.id));
       notify("Тренировка сохранена в истории");
     } catch (e) {
       setError(errorMessage(e, "Не удалось завершить тренировку."));
@@ -85,7 +83,7 @@ export function ActiveWorkout({
     setCancelling(true);
     setError(null);
     try {
-      await cancelWorkout(token, workout.id);
+      await cancelWorkout(workout.id);
       onWorkoutCancelled();
       notify("Тренировка отменена и удалена");
     } catch (e) {
@@ -142,7 +140,6 @@ export function ActiveWorkout({
       </div>
       {error && <ErrorState message={error} />}
       <WorkoutEditor
-        token={token}
         workoutId={workout.id}
         exercises={exercises}
         onBusy={(delta) => setOperations((n) => n + delta)}

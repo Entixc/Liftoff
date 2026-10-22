@@ -30,12 +30,8 @@ export type BodyWeightEntry = {
   recorded_at: string;
 };
 
-export async function getBodyWeightHistory(
-  token: string,
-): Promise<BodyWeightEntry[]> {
-  const response = await fetch(`${API_URL}/auth/me/weight-history`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getBodyWeightHistory(): Promise<BodyWeightEntry[]> {
+  const response = await fetch(`${API_URL}/auth/me/weight-history`);
   if (!response.ok) throw new ApiError(response.status);
   return response.json() as Promise<BodyWeightEntry[]>;
 }
@@ -76,12 +72,8 @@ export async function register(payload: RegisterPayload): Promise<UserProfile> {
   return response.json() as Promise<UserProfile>;
 }
 
-export async function getMyProfile(token: string): Promise<UserProfile> {
-  const response = await fetch(`${API_URL}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getMyProfile(): Promise<UserProfile> {
+  const response = await fetch(`${API_URL}/auth/me`);
 
   if (!response.ok) {
     throw new ApiError(response.status);
@@ -101,13 +93,11 @@ export async function restoreSession(): Promise<boolean> {
 }
 
 export async function updateMyProfile(
-  token: string,
   payload: UpdateProfilePayload,
 ): Promise<UserProfile> {
   const response = await fetch(`${API_URL}/auth/me`, {
     method: "PATCH",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),

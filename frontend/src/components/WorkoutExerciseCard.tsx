@@ -24,7 +24,6 @@ import { SwipeToDelete } from "./SwipeToDelete";
 
 type CardProps = {
   exercise?: Exercise;
-  token: string;
   workoutId: number;
   workoutExercise: WorkoutExercise;
   onDeleteExercise: (id: number) => Promise<void>;
@@ -164,7 +163,6 @@ function SetRow({
 }
 export function WorkoutExerciseCard({
   exercise,
-  token,
   workoutId,
   workoutExercise,
   onDeleteExercise,
@@ -193,10 +191,10 @@ export function WorkoutExerciseCard({
     setLoading(true);
     setLoadError(null);
     Promise.all([
-      getWorkoutSets(token, workoutId, workoutExercise.id),
+      getWorkoutSets(workoutId, workoutExercise.id),
       readOnly
         ? Promise.resolve(null)
-        : getLastSet(token, workoutExercise.exercise_id),
+        : getLastSet(workoutExercise.exercise_id),
     ])
       .then(([value, previous]) => {
         if (!cancelled) {
@@ -222,7 +220,7 @@ export function WorkoutExerciseCard({
     return () => {
       cancelled = true;
     };
-  }, [token, workoutId, workoutExercise.id, reload]);
+  }, [workoutId, workoutExercise.id, readOnly, reload]);
   async function add(event: FormEvent) {
     event.preventDefault();
     setAdding(true);
@@ -230,7 +228,6 @@ export function WorkoutExerciseCard({
     setError(null);
     try {
       const value = await createWorkoutSet(
-        token,
         workoutId,
         workoutExercise.id,
         {
@@ -257,7 +254,6 @@ export function WorkoutExerciseCard({
   }
   async function update(id: number, payload: UpdateWorkoutSetPayload) {
     const value = await updateWorkoutSet(
-      token,
       workoutId,
       workoutExercise.id,
       id,
@@ -270,7 +266,7 @@ export function WorkoutExerciseCard({
   async function remove(id: number) {
     busy(1);
     try {
-      await deleteWorkoutSet(token, workoutId, workoutExercise.id, id);
+      await deleteWorkoutSet(workoutId, workoutExercise.id, id);
       setSets((current) => current.filter((item) => item.id !== id));
     } finally {
       busy(-1);
