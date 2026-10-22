@@ -5,7 +5,11 @@ from app.models.exercise import Exercise
 
 
 def headers(client: TestClient, nickname: str) -> dict[str, str]:
-    credentials = {"nickname": nickname, "password": "strongpass"}
+    credentials = {
+        "nickname": nickname,
+        "email": f"{nickname}@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/register", json=credentials)
     token = client.post("/auth/login", json=credentials).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

@@ -162,6 +162,13 @@ test("navigation, catalog filters, profile and responsive layout", async ({
   });
   await noOverflow(page);
   await page.getByRole("link", { name: "Открыть профиль" }).click();
+  await expect(page.getByText("nurzhan@example.com").first()).toBeVisible();
+  await page
+    .getByRole("button", { name: "Отправить ссылку ещё раз" })
+    .click();
+  await expect(
+    page.getByText("Новая ссылка подтверждения создана"),
+  ).toBeVisible();
   await page.getByLabel("Рост, см").fill("182");
   await page.getByLabel("Вес, кг").fill("");
   await page.getByRole("button", { name: "Сохранить изменения" }).click();
@@ -190,6 +197,7 @@ test("registration, password toggle, login failure and success", async ({
   });
   await page.getByRole("button", { name: "Регистрация", exact: true }).click();
   await page.getByLabel("Никнейм", { exact: true }).fill("newuser");
+  await page.getByLabel("Email", { exact: true }).fill("newuser@example.com");
   await page.getByLabel("Пароль", { exact: true }).fill("testpassword");
   await page.getByLabel("Повтори пароль", { exact: true }).fill("different");
   await page
@@ -201,13 +209,13 @@ test("registration, password toggle, login failure and success", async ({
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
-  await expect(page.getByRole("alert")).toContainText("занят");
+  await expect(page.getByRole("alert")).toContainText("используется");
   await page.getByLabel("Никнейм", { exact: true }).fill("newuser");
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
   await expect(
-    page.getByText("Аккаунт создан. Теперь можно войти."),
+    page.getByText(/Аккаунт создан.*терминал backend/),
   ).toBeVisible();
   await expect(page.getByLabel("Никнейм")).toHaveValue("newuser");
   await page.getByLabel("Пароль", { exact: true }).fill("wrongpassword");
@@ -266,6 +274,20 @@ test("registration, password toggle, login failure and success", async ({
     .getByRole("button", { name: "Выйти", exact: true })
     .click();
   await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Войти", exact: true }),
+  ).toBeVisible();
+});
+
+test("email verification link confirms the address", async ({ page }) => {
+  await mockAPI(page, false);
+  await page.goto(
+    "/#/verify-email?token=valid-verification-token-1234567890",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Адрес подтверждён" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Продолжить" }).click();
   await expect(
     page.getByRole("button", { name: "Войти", exact: true }),
   ).toBeVisible();

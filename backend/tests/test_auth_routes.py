@@ -15,11 +15,17 @@ def test_register_user_creates_user(
 ) -> None:
     response = client.post(
         "/auth/register",
-        json={"nickname": "nurzhan", "password": "strongpass"},
+        json={
+            "nickname": "nurzhan",
+            "email": "Nurzhan@Example.COM",
+            "password": "strongpass",
+        },
     )
 
     assert response.status_code == 201
     assert response.json()["nickname"] == "nurzhan"
+    assert response.json()["email"] == "nurzhan@example.com"
+    assert response.json()["email_verified_at"] is None
     assert "password" not in response.json()
     assert "password_hash" not in response.json()
 
@@ -27,12 +33,17 @@ def test_register_user_creates_user(
         select(User).where(User.nickname == "nurzhan")
     )
     assert user is not None
+    assert user.email == "nurzhan@example.com"
     assert user.password_hash != "strongpass"
     assert verify_password("strongpass", user.password_hash)
 
 
 def test_register_user_rejects_duplicate_nickname(client: TestClient) -> None:
-    payload = {"nickname": "nurzhan", "password": "strongpass"}
+    payload = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
 
     first_response = client.post("/auth/register", json=payload)
     second_response = client.post("/auth/register", json=payload)
@@ -53,8 +64,37 @@ def test_register_user_rejects_invalid_request(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_register_user_rejects_duplicate_email_case_insensitively(
+    client: TestClient,
+) -> None:
+    first_response = client.post(
+        "/auth/register",
+        json={
+            "nickname": "first-user",
+            "email": "User@Example.COM",
+            "password": "strongpass",
+        },
+    )
+    second_response = client.post(
+        "/auth/register",
+        json={
+            "nickname": "second-user",
+            "email": "user@example.com",
+            "password": "strongpass",
+        },
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 409
+    assert second_response.json() == {"detail": "Email is already registered"}
+
+
 def test_login_user_returns_access_token(client: TestClient) -> None:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     registration_response = client.post("/auth/register", json=credentials)
 
     login_response = client.post("/auth/login", json=credentials)
@@ -74,7 +114,11 @@ def test_login_user_returns_access_token(client: TestClient) -> None:
 def test_login_user_rejects_invalid_credentials(client: TestClient) -> None:
     client.post(
         "/auth/register",
-        json={"nickname": "nurzhan", "password": "strongpass"},
+        json={
+            "nickname": "nurzhan",
+            "email": "nurzhan@example.com",
+            "password": "strongpass",
+        },
     )
 
     wrong_password_response = client.post(
@@ -97,7 +141,11 @@ def test_login_user_rejects_invalid_credentials(client: TestClient) -> None:
 def test_update_my_profile_updates_only_provided_fields(
     client: TestClient,
 ) -> None:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/register", json=credentials)
     login_response = client.post("/auth/login", json=credentials)
     headers = {
@@ -126,7 +174,11 @@ def test_update_my_profile_updates_only_provided_fields(
 def test_update_my_profile_clears_explicit_null_field(
     client: TestClient,
 ) -> None:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/register", json=credentials)
     login_response = client.post("/auth/login", json=credentials)
     headers = {
@@ -150,7 +202,11 @@ def test_update_my_profile_clears_explicit_null_field(
 
 
 def test_update_my_profile_rejects_empty_request(client: TestClient) -> None:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/register", json=credentials)
     login_response = client.post("/auth/login", json=credentials)
 

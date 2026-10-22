@@ -1,12 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 import type { Workout, WorkoutExercise, WorkoutSet } from "../src/api/workouts";
 import type { Routine } from "../src/api/routines";
+import type { UserProfile } from "../src/api/auth";
 
 // Stateful fake API: browser tests never touch a real account or database.
 export async function mockAPI(page: Page, authenticated = true) {
-  const profile = {
+  const profile: UserProfile = {
     id: 1,
     nickname: "nurzhan",
+    email: "nurzhan@example.com",
+    email_verified_at: null,
     height_cm: 180,
     body_weight_kg: "75.50",
     created_at: "2026-10-01T10:00:00Z",
@@ -119,8 +122,19 @@ export async function mockAPI(page: Page, authenticated = true) {
     }
     if (path === "/auth/register") {
       if (body.nickname === "taken") return respond({}, 409);
-      return respond({ ...profile, nickname: body.nickname }, 201);
+      return respond(
+        { ...profile, nickname: body.nickname, email: body.email },
+        201,
+      );
     }
+    if (path === "/auth/email/verify" && method === "POST") {
+      if (body.token !== "valid-verification-token-1234567890")
+        return respond({ detail: "Invalid or expired verification token" }, 400);
+      profile.email_verified_at = new Date().toISOString();
+      return route.fulfill({ status: 204, body: "" });
+    }
+    if (path === "/auth/me/email/verification" && method === "POST")
+      return route.fulfill({ status: 202, body: "" });
     if (path === "/auth/me/weight-history") return respond(weightEntries);
     if (path === "/auth/me/password" && method === "PATCH") {
       if (body.current_password !== accountPassword) return respond({}, 400);

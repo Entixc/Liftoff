@@ -6,7 +6,11 @@ from app.models.body_weight_entry import BodyWeightEntry
 
 
 def register_and_login(client: TestClient, nickname: str) -> dict[str, str]:
-    credentials = {"nickname": nickname, "password": "strongpass"}
+    credentials = {
+        "nickname": nickname,
+        "email": f"{nickname}@example.com",
+        "password": "strongpass",
+    }
     assert client.post("/auth/register", json=credentials).status_code == 201
     token = client.post("/auth/login", json=credentials).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

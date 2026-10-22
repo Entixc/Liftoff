@@ -21,6 +21,13 @@ from app.core.security import (
     verify_password,
 )
 from app.core.config import get_session_cookie_secure
+from app.core.email_delivery import send_email_verification
+from app.core.email_verification import (
+    as_utc,
+    get_email_verification_token,
+    issue_email_verification_token,
+    verification_resend_retry_after,
+)
 from app.core.sessions import (
     SESSION_ABSOLUTE_TIMEOUT,
     SESSION_COOKIE_NAME,
@@ -41,6 +48,7 @@ from app.schemas.auth import (
     UserResponse,
     BodyWeightEntryResponse,
     ChangePasswordRequest,
+    VerifyEmailRequest,
 )
 
 router = APIRouter(
@@ -137,32 +145,95 @@ def change_my_password(
     status_code=status.HTTP_201_CREATED,
 )
 def register_user(request: RegisterRequest, db: DatabaseSession) -> User:
-    existing_user = db.scalar(
+    existing_nickname = db.scalar(
         select(User).where(User.nickname == request.nickname)
     )
-    if existing_user is not None:
+    if existing_nickname is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Nickname is already registered",
         )
+    existing_email = db.scalar(select(User).where(User.email == request.email))
+    if existing_email is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered",
+        )
 
     user = User(
         nickname=request.nickname,
+        email=request.email,
         password_hash=hash_password(request.password),
     )
     db.add(user)
 
     try:
+        db.flush()
+        verification_token = issue_email_verification_token(db, user.id)
         db.commit()
     except IntegrityError as error:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Nickname is already registered",
+            detail="Nickname or email is already registered",
         ) from error
 
     db.refresh(user)
+    send_email_verification(user.email, verification_token)
     return user
+
+
+@router.post("/email/verify", status_code=status.HTTP_204_NO_CONTENT)
+def verify_email(request: VerifyEmailRequest, db: DatabaseSession) -> None:
+    token = get_email_verification_token(db, request.token)
+    now = datetime.now(timezone.utc)
+    if token is None or now >= as_utc(token.expires_at):
+        if token is not None:
+            db.delete(token)
+            db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
+
+    user = db.get(User, token.user_id)
+    if user is None:
+        db.delete(token)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
+
+    user.email_verified_at = now
+    db.delete(token)
+    db.commit()
+
+
+@router.post(
+    "/me/email/verification",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def resend_email_verification(
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> None:
+    if current_user.email_verified_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already verified",
+        )
+    retry_after = verification_resend_retry_after(db, current_user.id)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Verification email was sent recently",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    verification_token = issue_email_verification_token(db, current_user.id)
+    db.commit()
+    send_email_verification(current_user.email, verification_token)
 
 
 def raise_login_throttled(retry_after: int) -> None:

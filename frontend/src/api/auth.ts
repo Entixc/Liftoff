@@ -8,12 +8,15 @@ export type LoginPayload = {
 
 export type RegisterPayload = {
   nickname: string;
+  email: string;
   password: string;
 };
 
 export type UserProfile = {
   id: number;
   nickname: string;
+  email: string;
+  email_verified_at: string | null;
   height_cm: number | null;
   body_weight_kg: string | null;
   created_at: string;
@@ -28,6 +31,22 @@ export type ChangePasswordPayload = {
   current_password: string;
   new_password: string;
 };
+
+export async function verifyEmail(token: string): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/email/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!response.ok) throw new ApiError(response.status);
+}
+
+export async function resendEmailVerification(): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/me/email/verification`, {
+    method: "POST",
+  });
+  if (!response.ok) throw new ApiError(response.status);
+}
 
 export type BodyWeightEntry = {
   id: number;

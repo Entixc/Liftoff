@@ -23,6 +23,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-console}
     command: >-
       sh -c "python -m alembic upgrade head &&
       python -m app.scripts.seed_exercises &&

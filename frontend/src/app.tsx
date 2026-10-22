@@ -32,6 +32,8 @@ import { WorkoutHistoryDetails } from "./components/WorkoutHistoryDetails";
 import { ProgressAnalytics } from "./components/ProgressAnalytics";
 import { BodyWeightTrend } from "./components/BodyWeightTrend";
 import { ChangePasswordForm } from "./components/ChangePasswordForm";
+import { EmailVerificationPanel } from "./components/EmailVerificationPanel";
+import { EmailVerificationScreen } from "./components/EmailVerificationScreen";
 import {
   Badge,
   Button,
@@ -65,6 +67,21 @@ function useRoute() {
 }
 function navigate(page: Page, id?: number) {
   window.location.hash = `/${page}${id ? `/${id}` : ""}`;
+}
+
+function useEmailVerificationToken() {
+  const read = () => {
+    const [path, query = ""] = window.location.hash.split("?", 2);
+    if (path !== "#/verify-email") return null;
+    return new URLSearchParams(query).get("token") ?? "";
+  };
+  const [token, setToken] = useState<string | null>(read);
+  useEffect(() => {
+    const update = () => setToken(read());
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return token;
 }
 function AuthScreen({
   onLogin,
@@ -134,7 +151,8 @@ function AuthScreen({
           )}
           {registered && mode === "login" && (
             <p role="status" className="success-message">
-              Аккаунт создан. Теперь можно войти.
+              Аккаунт создан. Проверь email (локально — терминал backend) и
+              войди.
             </p>
           )}
           {mode === "login" ? (
@@ -610,6 +628,7 @@ function SessionApp({ logout }: { logout: () => void }) {
                 {profile.nickname.slice(0, 1).toUpperCase()}
               </span>
               <h2>{profile.nickname}</h2>
+              <p className="muted">{profile.email}</p>
               <Badge>Участник Liftoff</Badge>
               <div className="profile-divider" />
               <span className="muted">С нами с</span>
@@ -628,6 +647,7 @@ function SessionApp({ logout }: { logout: () => void }) {
                     .catch(() => {});
                 }}
               />
+              <EmailVerificationPanel profile={profile} />
               <ChangePasswordForm />
               <Panel>
                 <div className="section-heading">
@@ -651,6 +671,7 @@ function SessionApp({ logout }: { logout: () => void }) {
   );
 }
 function AppContent() {
+  const verificationToken = useEmailVerificationToken();
   const [session, setSession] = useState<
     "checking" | "authenticated" | null
   >("checking");
@@ -677,6 +698,16 @@ function AppContent() {
       window.removeEventListener("session-expired", expired);
     };
   }, []);
+  if (verificationToken !== null) {
+    return (
+      <EmailVerificationScreen
+        token={verificationToken}
+        onContinue={() => {
+          window.location.hash = "/home";
+        }}
+      />
+    );
+  }
   return session === "checking" ? (
     <LoadingState />
   ) : session ? (

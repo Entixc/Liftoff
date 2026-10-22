@@ -36,3 +36,14 @@ def get_session_cookie_secure() -> bool:
     if value not in {"true", "false"}:
         raise RuntimeError("SESSION_COOKIE_SECURE must be true or false")
     return value == "true"
+
+
+def get_frontend_url() -> str:
+    return os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
+
+
+def get_email_delivery_mode() -> str:
+    mode = os.getenv("EMAIL_DELIVERY_MODE", "console").strip().lower()
+    if mode != "console":
+        raise RuntimeError("EMAIL_DELIVERY_MODE must be console")
+    return mode

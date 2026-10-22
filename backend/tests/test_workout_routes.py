@@ -16,6 +16,7 @@ def get_auth_headers(
 ) -> dict[str, str]:
     credentials = {
         "nickname": nickname,
+        "email": f"{nickname}@example.com",
         "password": "strongpass",
     }
     client.post("/auth/register", json=credentials)

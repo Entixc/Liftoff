@@ -2,12 +2,18 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
     nickname: str = Field(min_length=3, max_length=50)
+    email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, email: EmailStr) -> str:
+        return str(email).lower()
 
 
 class LoginRequest(BaseModel):
@@ -18,6 +24,10 @@ class LoginRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=8, max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=512)
 
 
 class TokenResponse(BaseModel):
@@ -34,6 +44,8 @@ class UserResponse(BaseModel):
 
     id: int
     nickname: str
+    email: str
+    email_verified_at: datetime | None
     height_cm: int | None
     body_weight_kg: Decimal | None
     created_at: datetime

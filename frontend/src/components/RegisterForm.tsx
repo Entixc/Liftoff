@@ -11,6 +11,7 @@ export function RegisterForm({
   onShowLogin: () => void;
 }) {
   const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +25,12 @@ export function RegisterForm({
     }
     setBusy(true);
     try {
-      await register({ nickname, password });
+      await register({ nickname, email, password });
       onRegistered(nickname);
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 409
-          ? "Этот никнейм уже занят. Выбери другой."
+          ? "Этот никнейм или email уже используется."
           : errorMessage(e),
       );
     } finally {
@@ -56,6 +57,15 @@ export function RegisterForm({
         maxLength={50}
         required
         placeholder="От 3 до 50 символов"
+      />
+      <Input
+        label="Email"
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        placeholder="you@example.com"
       />
       <PasswordInput
         label="Пароль"

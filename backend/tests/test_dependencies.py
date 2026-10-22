@@ -8,7 +8,11 @@ from app.core.security import JWT_ALGORITHM
 
 
 def test_get_my_profile_returns_authenticated_user(client: TestClient) -> None:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
 
     registration_response = client.post("/auth/register", json=credentials)
     login_response = client.post("/auth/login", json=credentials)

@@ -8,7 +8,11 @@ from app.core.login_throttle import IP_FAILURE_LIMIT, login_retry_after
 from app.models.login_attempt import LoginAttempt
 
 
-CREDENTIALS = {"nickname": "nurzhan", "password": "strongpass"}
+CREDENTIALS = {
+    "nickname": "nurzhan",
+    "email": "nurzhan@example.com",
+    "password": "strongpass",
+}
 
 
 def register(client: TestClient) -> None:

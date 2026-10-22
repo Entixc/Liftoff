@@ -13,7 +13,11 @@ ORIGIN = {"Origin": "http://localhost:5173", "X-Session-Client": "browser"}
 
 
 def sign_in(client: TestClient) -> str:
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/register", json=credentials)
     response = client.post("/auth/login", json=credentials, headers=ORIGIN)
     assert response.status_code == 200
@@ -55,7 +59,11 @@ def test_idle_and_absolute_session_expiry(client: TestClient, db_session: Sessio
     assert client.get("/auth/me").status_code == 401
 
     client.cookies.clear()
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
     client.post("/auth/login", json=credentials, headers=ORIGIN)
     row = db_session.scalar(select(UserSession))
     assert row is not None
@@ -106,7 +114,11 @@ def test_change_password_requires_current_password(
     assert client.post(
         "/auth/login",
         headers=ORIGIN,
-        json={"nickname": "nurzhan", "password": "strongpass"},
+        json={
+            "nickname": "nurzhan",
+            "email": "nurzhan@example.com",
+            "password": "strongpass",
+        },
     ).status_code == 200
 
 
@@ -115,7 +127,11 @@ def test_change_password_keeps_current_and_revokes_other_sessions(
     db_session: Session,
 ) -> None:
     sign_in(client)
-    credentials = {"nickname": "nurzhan", "password": "strongpass"}
+    credentials = {
+        "nickname": "nurzhan",
+        "email": "nurzhan@example.com",
+        "password": "strongpass",
+    }
 
     with TestClient(app) as other_client:
         assert other_client.post(

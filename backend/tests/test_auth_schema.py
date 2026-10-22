@@ -34,10 +34,12 @@ def test_change_password_request_rejects_short_new_password() -> None:
 def test_register_request_accepts_valid_data() -> None:
     request = RegisterRequest(
         nickname="nurzhan",
+        email="Nurzhan@Example.COM",
         password="strongpass",
     )
 
     assert request.nickname == "nurzhan"
+    assert request.email == "nurzhan@example.com"
     assert request.password == "strongpass"
 
 
@@ -45,6 +47,7 @@ def test_register_request_rejects_short_nickname() -> None:
     with pytest.raises(ValidationError):
         RegisterRequest(
             nickname="ab",
+            email="nurzhan@example.com",
             password="strongpass",
         )
 
@@ -53,7 +56,17 @@ def test_register_request_rejects_short_password() -> None:
     with pytest.raises(ValidationError):
         RegisterRequest(
             nickname="nurzhan",
+            email="nurzhan@example.com",
             password="short",
+        )
+
+
+def test_register_request_rejects_invalid_email() -> None:
+    with pytest.raises(ValidationError):
+        RegisterRequest(
+            nickname="nurzhan",
+            email="not-an-email",
+            password="strongpass",
         )
 
 
@@ -61,6 +74,8 @@ def test_user_response_excludes_password_hash() -> None:
     user = User(
         id=1,
         nickname="nurzhan",
+        email="nurzhan@example.com",
+        email_verified_at=None,
         password_hash="secret-hash",
         height_cm=180,
         body_weight_kg=Decimal("75.50"),
@@ -71,6 +86,8 @@ def test_user_response_excludes_password_hash() -> None:
 
     assert response.id == 1
     assert response.nickname == "nurzhan"
+    assert response.email == "nurzhan@example.com"
+    assert response.email_verified_at is None
     assert "password_hash" not in response.model_dump()
 
 

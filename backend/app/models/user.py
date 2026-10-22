@@ -10,6 +10,11 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
     nickname: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     body_weight_kg: Mapped[Decimal | None] = mapped_column(Numeric(5, 2),nullable=True)
