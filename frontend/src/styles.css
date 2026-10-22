@@ -2001,6 +2001,39 @@ input:focus-visible {
 .progress-panel summary { cursor: pointer; }
 @media (max-width: 600px) { .progress-records { grid-template-columns: 1fr; } }
 
+.catalog-detail-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.exercise-details { display: grid; gap: 20px; }
+.exercise-details > .button { justify-self: start; }
+.exercise-detail-header { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.exercise-detail-header h1 { margin: 8px 0 0; }
+.exercise-detail-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 18px; }
+.exercise-detail-grid h2, .exercise-details > .panel h2 { margin-bottom: 16px; }
+.exercise-instructions { color: #d6e2d7; line-height: 1.7; font-size: 16px; }
+.muscle-diagram { background: #14251e; border: 1px solid #415e4a; border-radius: 16px; padding: 16px; }
+.muscle-views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.muscle-body-view { text-align: center; color: #c4dcc7; font-size: 13px; }
+.muscle-body-view svg { display: block; width: 100%; height: min(38vw, 350px); min-height: 220px; }
+.body-base { fill: #293c30; stroke: #668570; stroke-width: 1.3; }
+.body-muscle { stroke: #719078; stroke-width: 0.65; transition: fill 150ms ease; }
+.body-muscle-idle { fill: #3d5544; }
+.body-muscle-primary { fill: #9ff16d; stroke: #c6ff9f; }
+.body-muscle-secondary { fill: #67b7d7; stroke: #acdff3; }
+.muscle-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; margin-top: 8px; color: #e3efe4; font-size: 13px; }
+.muscle-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.muscle-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend-primary { background: #9ff16d; } .legend-secondary { background: #67b7d7; }
+.exercise-muscle-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.exercise-muscle-lists h3 { font-size: 15px; margin-bottom: 8px; }
+.exercise-muscle-lists ul { margin: 0; padding-left: 18px; line-height: 1.6; }
+.exercise-history-list, .exercise-active-history > ul { list-style: none; margin: 0; padding: 0; }
+.exercise-history-entry { border-top: 1px solid #425347; padding: 16px 0; display: grid; gap: 8px; }
+.exercise-history-entry > div { display: flex; gap: 12px; align-items: baseline; }
+.exercise-history-entry ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+.exercise-history-entry .text-link { justify-self: start; }
+.exercise-active-history { margin-bottom: 18px; }
+@media (max-width: 850px) { .exercise-detail-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .muscle-body-view svg { min-height: 180px; height: 54vw; } .exercise-muscle-lists { grid-template-columns: 1fr; } }
+
 .session-actions {
   display: flex;
   align-items: center;

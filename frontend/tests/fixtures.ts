@@ -131,6 +131,55 @@ export async function mockAPI(page: Page, authenticated = true) {
       return respond(profile);
     }
     if (path === "/exercises") return respond(exercises);
+    const exerciseDetail = path.match(/^\/exercises\/(\d+)$/);
+    if (exerciseDetail) {
+      const exercise = exercises.find(
+        (item) => item.id === Number(exerciseDetail[1]),
+      );
+      return respond(
+        exercise
+          ? {
+              ...exercise,
+              description_en:
+                "Lower the weight with control, then press it up.",
+              muscles: [
+                {
+                  slug: "middle_chest",
+                  name_en: "Middle chest",
+                  role: "primary",
+                },
+                { slug: "triceps", name_en: "Triceps", role: "secondary" },
+              ],
+            }
+          : {},
+        exercise ? 200 : 404,
+      );
+    }
+    const exerciseHistory = path.match(/^\/exercises\/(\d+)\/history$/);
+    if (exerciseHistory) {
+      const relatedItems = items.filter(
+        (item) => item.exercise_id === Number(exerciseHistory[1]),
+      );
+      const entries = relatedItems.flatMap((item) => {
+        const workout = [...history, ...(active ? [active] : [])].find(
+          (entry) => entry.id === item.workout_id,
+        );
+        return workout
+          ? [
+              {
+                workout_id: workout.id,
+                started_at: workout.started_at,
+                finished_at: workout.finished_at,
+                sets: sets.filter((set) => set.workout_exercise_id === item.id),
+              },
+            ]
+          : [];
+      });
+      return respond({
+        active: entries.find((entry) => entry.finished_at === null) ?? null,
+        completed: entries.filter((entry) => entry.finished_at !== null),
+      });
+    }
     const lastSet = path.match(/^\/exercises\/(\d+)\/last-set$/);
     if (lastSet) {
       const matchingItems = items.filter(

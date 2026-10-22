@@ -21,6 +21,7 @@ import { errorMessage } from "./api/http";
 import { AppShell, Brand, pages, type Page } from "./components/AppShell";
 import { ActiveWorkout, WorkoutTimer } from "./components/ActiveWorkout";
 import { ExerciseCatalog } from "./components/ExerciseCatalog";
+import { ExerciseDetails } from "./components/ExerciseDetails";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
 import { Routines } from "./components/Routines";
@@ -57,6 +58,7 @@ function useRoute() {
   return {
     page,
     detailId: page === "history" ? Number(route.split("/")[1]) || null : null,
+    catalogId: page === "catalog" ? Number(route.split("/")[1]) || null : null,
   };
 }
 function navigate(page: Page, id?: number) {
@@ -172,7 +174,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [activeCount, setActiveCount] = useState<number | null>(null);
-  const { page, detailId } = useRoute();
+  const { page, detailId, catalogId } = useRoute();
   const { notify, confirm } = useUI();
   useEffect(() => {
     let cancelled = false;
@@ -312,7 +314,7 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   return (
     <AppShell
       page={page}
-      detailId={detailId}
+      detailId={detailId ?? catalogId}
       profile={profile}
       active={Boolean(active)}
       onLogout={() => void signOut()}
@@ -576,16 +578,27 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
           />
         </>
       )}
-      {page === "catalog" && (
-        <>
-          <PageHeader
-            eyebrow="ТВОЯ БАЗА ДВИЖЕНИЙ"
-            title="Упражнения"
-            description="Найди упражнения для своей следующей тренировки."
+      {page === "catalog" &&
+        (catalogId ? (
+          <ExerciseDetails
+            key={catalogId}
+            exerciseId={catalogId}
+            token={token}
+            onBack={() => navigate("catalog")}
           />
-          <ExerciseCatalog exercises={exercises} />
-        </>
-      )}
+        ) : (
+          <>
+            <PageHeader
+              eyebrow="ТВОЯ БАЗА ДВИЖЕНИЙ"
+              title="Упражнения"
+              description="Найди упражнения для своей следующей тренировки."
+            />
+            <ExerciseCatalog
+              exercises={exercises}
+              onOpen={(exercise) => navigate("catalog", exercise.id)}
+            />
+          </>
+        ))}
       {page === "profile" && (
         <>
           <PageHeader

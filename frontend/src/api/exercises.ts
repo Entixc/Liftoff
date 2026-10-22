@@ -9,6 +9,52 @@ export type Exercise = {
   is_bodyweight: boolean;
 };
 
+export type ExerciseMuscle = {
+  slug: string;
+  name_en: string;
+  role: "primary" | "secondary";
+};
+export type ExerciseDetail = Exercise & {
+  description_en: string;
+  muscles: ExerciseMuscle[];
+};
+export type ExerciseHistorySet = {
+  id: number;
+  weight_kg: string | null;
+  repetitions: number;
+  is_completed: boolean;
+  position: number;
+};
+export type ExerciseHistoryWorkout = {
+  workout_id: number;
+  started_at: string;
+  finished_at: string | null;
+  sets: ExerciseHistorySet[];
+};
+export type ExerciseHistory = {
+  active: ExerciseHistoryWorkout | null;
+  completed: ExerciseHistoryWorkout[];
+};
+
+export async function getExerciseDetail(
+  exerciseId: number,
+): Promise<ExerciseDetail> {
+  const response = await fetch(`${API_URL}/exercises/${exerciseId}`);
+  if (!response.ok) throw new Error("Не удалось загрузить упражнение");
+  return response.json() as Promise<ExerciseDetail>;
+}
+
+export async function getExerciseHistory(
+  token: string,
+  exerciseId: number,
+): Promise<ExerciseHistory> {
+  const response = await fetch(`${API_URL}/exercises/${exerciseId}/history`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Не удалось загрузить историю упражнения");
+  return response.json() as Promise<ExerciseHistory>;
+}
+
 export async function getExercises(): Promise<Exercise[]> {
   const response = await fetch(`${API_URL}/exercises`);
 

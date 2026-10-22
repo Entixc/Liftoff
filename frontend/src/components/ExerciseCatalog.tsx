@@ -9,11 +9,13 @@ export function ExerciseCatalog({
   onAdd,
   busy = false,
   picker = false,
+  onOpen,
 }: {
   exercises: Exercise[];
   onAdd?: (exercise: Exercise) => Promise<void>;
   busy?: boolean;
   picker?: boolean;
+  onOpen?: (exercise: Exercise) => void;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -77,6 +79,15 @@ export function ExerciseCatalog({
                 <Badge>
                   {exercise.is_bodyweight ? "Собственный вес" : "С отягощением"}
                 </Badge>
+                {onOpen && (
+                  <button
+                    type="button"
+                    className="text-link catalog-detail-link"
+                    onClick={() => onOpen(exercise)}
+                  >
+                    Подробнее об упражнении <Icon name="arrow" size={15} />
+                  </button>
+                )}
               </div>
               {onAdd && (
                 <Button

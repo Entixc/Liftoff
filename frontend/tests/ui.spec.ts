@@ -303,6 +303,40 @@ test("progress appears on home and history with volume and records", async ({
   );
 });
 
+test("exercise page shows muscles, instructions and history", async ({
+  page,
+}, testInfo) => {
+  await mockAPI(page);
+  await page.goto("/#/catalog");
+  await page
+    .getByRole("button", { name: /Подробнее об упражнении/ })
+    .first()
+    .click();
+  await expect(page.locator(".exercise-details h1")).toHaveText(
+    "Barbell Bench Press",
+  );
+  await expect(page.locator(".exercise-muscle-lists")).toContainText(
+    "Middle chest",
+  );
+  await expect(page.locator(".exercise-muscle-lists")).toContainText("Triceps");
+  await expect(page.locator(".muscle-body-view")).toHaveCount(2);
+  await expect(page.locator(".exercise-instructions")).toContainText(
+    "Lower the weight",
+  );
+  await expect(page.locator(".exercise-history-list")).toContainText("60 кг");
+  await expect(page.locator(".exercise-history-list")).toContainText(
+    "Выполнен",
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("exercise-details.png"),
+    fullPage: true,
+  });
+  await page.reload();
+  await expect(page.locator(".exercise-details h1")).toHaveText(
+    "Barbell Bench Press",
+  );
+});
+
 test("body weight graph updates from profile and filters periods", async ({
   page,
 }) => {
