@@ -27,6 +27,8 @@ export function LoginForm({
       setError(
         e instanceof ApiError && e.status === 401
           ? "Неверный никнейм или пароль."
+          : e instanceof ApiError && e.status === 429
+            ? "Слишком много попыток входа. Подожди 15 минут и попробуй снова."
           : errorMessage(e),
       );
     } finally {

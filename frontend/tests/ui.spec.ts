@@ -271,6 +271,20 @@ test("registration, password toggle, login failure and success", async ({
   ).toBeVisible();
 });
 
+test("login throttling explains when the user must wait", async ({ page }) => {
+  await mockAPI(page, false);
+  await page.goto("/");
+  await page.getByLabel("Никнейм", { exact: true }).fill("nurzhan");
+  await page.getByLabel("Пароль", { exact: true }).fill("wrongpassword");
+
+  for (let attempt = 0; attempt < 5; attempt += 1)
+    await page.getByRole("button", { name: "Войти", exact: true }).click();
+
+  await expect(page.getByRole("alert")).toHaveText(
+    "Слишком много попыток входа. Подожди 15 минут и попробуй снова.",
+  );
+});
+
 test("full workout: create, edit, completion, history and time", async ({
   page,
 }, testInfo) => {

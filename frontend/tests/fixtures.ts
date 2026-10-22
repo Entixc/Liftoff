@@ -90,6 +90,7 @@ export async function mockAPI(page: Page, authenticated = true) {
     setId = 2,
     routineId = 1;
   let accountPassword = "testpassword";
+  let loginFailures = 0;
   await page.route("**/mock-api/**", async (route) => {
     if (state.offline) {
       await route.abort("connectionrefused");
@@ -104,7 +105,11 @@ export async function mockAPI(page: Page, authenticated = true) {
     if (state.unauthorized && !["/auth/login", "/auth/register"].includes(path))
       return respond({ detail: "Not authenticated" }, 401);
     if (path === "/auth/login") {
-      if (body.password !== accountPassword) return respond({}, 401);
+      if (body.password !== accountPassword) {
+        loginFailures += 1;
+        return respond({}, loginFailures >= 5 ? 429 : 401);
+      }
+      loginFailures = 0;
       state.sessionAuthenticated = true;
       return respond({ authenticated: true });
     }

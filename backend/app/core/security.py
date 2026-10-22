@@ -7,6 +7,7 @@ from app.core.config import get_jwt_secret_key
 
 
 password_hasher = PasswordHash.recommended()
+DUMMY_PASSWORD_HASH = password_hasher.hash("not-a-real-user-password")
 
 JWT_ALGORITHM = "HS256"
 JWT_SECRET_KEY = get_jwt_secret_key()

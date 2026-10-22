@@ -14,6 +14,7 @@ from app.app import app
 from app.db.base import Base
 from app.db.session import get_db
 from app.models.user_session import UserSession
+from app.models.login_attempt import LoginAttempt
 
 
 test_engine = create_engine(

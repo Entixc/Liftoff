@@ -7,7 +7,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.login_throttle import (
+    clear_login_failures,
+    client_ip,
+    login_retry_after,
+    nickname_key,
+    record_login_failure,
+)
+from app.core.security import (
+    DUMMY_PASSWORD_HASH,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 from app.core.config import get_session_cookie_secure
 from app.core.sessions import (
     SESSION_ABSOLUTE_TIMEOUT,
@@ -153,16 +165,42 @@ def register_user(request: RegisterRequest, db: DatabaseSession) -> User:
     return user
 
 
-@router.post("/login", response_model=TokenResponse | SessionLoginResponse)
-def login_user(request: LoginRequest, http_request: Request, response: Response, db: DatabaseSession) -> TokenResponse | SessionLoginResponse:
-    user = db.scalar(select(User).where(User.nickname == request.nickname))
+def raise_login_throttled(retry_after: int) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="Too many login attempts. Try again later.",
+        headers={"Retry-After": str(retry_after)},
+    )
 
-    if user is None or not verify_password(request.password, user.password_hash):
+
+@router.post("/login", response_model=TokenResponse | SessionLoginResponse)
+def login_user(
+    request: LoginRequest,
+    http_request: Request,
+    response: Response,
+    db: DatabaseSession,
+) -> TokenResponse | SessionLoginResponse:
+    ip_address = client_ip(http_request)
+    identifier = nickname_key(request.nickname)
+    retry_after = login_retry_after(db, ip_address, identifier)
+    if retry_after is not None:
+        raise_login_throttled(retry_after)
+
+    user = db.scalar(select(User).where(User.nickname == request.nickname))
+    password_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+    password_matches = verify_password(request.password, password_hash)
+
+    if user is None or not password_matches:
+        retry_after = record_login_failure(db, ip_address, identifier)
+        if retry_after is not None:
+            raise_login_throttled(retry_after)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid nickname or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    clear_login_failures(db, ip_address, identifier)
 
     if http_request.headers.get("x-session-client") == "browser":
         require_trusted_origin(http_request)
