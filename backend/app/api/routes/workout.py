@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -14,6 +14,7 @@ from app.models.workout_exercise import WorkoutExercise
 from app.models.workout_set import WorkoutSet
 from app.schemas.workout import (
     AddWorkoutExerciseRequest,
+    ProgressSetResponse,
     UpdateWorkoutTimeRequest,
     WorkoutExerciseResponse,
     WorkoutResponse,
@@ -92,6 +93,40 @@ def list_workout_history(
             .order_by(Workout.finished_at.desc(), Workout.id.desc())
         ).all()
     )
+
+
+@router.get("/progress", response_model=list[ProgressSetResponse])
+def get_workout_progress(
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> list[ProgressSetResponse]:
+    rows = db.execute(
+        select(
+            Workout.id,
+            Workout.started_at,
+            WorkoutExercise.exercise_id,
+            WorkoutSet.weight_kg,
+            WorkoutSet.repetitions,
+        )
+        .join(WorkoutExercise, WorkoutExercise.workout_id == Workout.id)
+        .join(WorkoutSet, WorkoutSet.workout_exercise_id == WorkoutExercise.id)
+        .where(
+            Workout.user_id == current_user.id,
+            Workout.status == "completed",
+            WorkoutSet.is_completed.is_(True),
+        )
+        .order_by(Workout.started_at, Workout.id, WorkoutSet.id)
+    ).all()
+    return [
+        ProgressSetResponse(
+            workout_id=row[0],
+            started_at=row[1],
+            exercise_id=row[2],
+            weight_kg=row[3],
+            repetitions=row[4],
+        )
+        for row in rows
+    ]
 
 
 @router.delete("/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -182,19 +217,15 @@ def update_workout_time(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only completed workout time can be changed",
         )
-    if request.started_at >= request.finished_at:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Workout start must be before finish",
-        )
-    if request.finished_at > datetime.now(timezone.utc):
+    finished_at = request.started_at + timedelta(minutes=request.duration_minutes)
+    if finished_at > datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Workout finish cannot be in the future",
         )
 
     workout.started_at = request.started_at
-    workout.finished_at = request.finished_at
+    workout.finished_at = finished_at
     db.commit()
     db.refresh(workout)
     return workout

@@ -36,3 +36,11 @@ class UpdateProfileRequest(BaseModel):
         Decimal | None,
         Field(gt=0, lt=1000, decimal_places=2),
     ] = None
+
+
+class BodyWeightEntryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    weight_kg: Decimal
+    recorded_at: datetime

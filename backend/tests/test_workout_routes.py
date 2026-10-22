@@ -523,7 +523,7 @@ def test_update_completed_workout_time(
         f"/workouts/{workout['id']}/time",
         json={
             "started_at": started_at.isoformat(),
-            "finished_at": finished_at.isoformat(),
+            "duration_minutes": 75,
         },
         headers=headers,
     )
@@ -534,7 +534,7 @@ def test_update_completed_workout_time(
     assert response.json()["status"] == "completed"
 
 
-def test_update_workout_time_rejects_invalid_range(
+def test_update_workout_time_rejects_invalid_duration(
     client: TestClient,
 ) -> None:
     headers = get_auth_headers(client)
@@ -546,15 +546,13 @@ def test_update_workout_time_rejects_invalid_range(
         f"/workouts/{workout['id']}/time",
         json={
             "started_at": timestamp.isoformat(),
-            "finished_at": timestamp.isoformat(),
+            "duration_minutes": 0,
         },
         headers=headers,
     )
 
     assert response.status_code == 422
-    assert response.json() == {
-        "detail": "Workout start must be before finish"
-    }
+    assert response.json()["detail"][0]["loc"] == ["body", "duration_minutes"]
 
 
 def test_update_workout_time_rejects_future_finish(
@@ -570,7 +568,7 @@ def test_update_workout_time_rejects_future_finish(
         f"/workouts/{workout['id']}/time",
         json={
             "started_at": started_at.isoformat(),
-            "finished_at": finished_at.isoformat(),
+            "duration_minutes": 60,
         },
         headers=headers,
     )
@@ -589,7 +587,7 @@ def test_update_workout_time_rejects_active_and_another_users_workout(
     finished_at = datetime.now(timezone.utc) - timedelta(hours=1)
     payload = {
         "started_at": (finished_at - timedelta(hours=1)).isoformat(),
-        "finished_at": finished_at.isoformat(),
+        "duration_minutes": 60,
     }
 
     active_response = client.patch(
@@ -610,3 +608,47 @@ def test_update_workout_time_rejects_active_and_another_users_workout(
     }
     assert another_user_response.status_code == 404
     assert another_user_response.json() == {"detail": "Workout not found"}
+
+
+def test_progress_contains_only_own_completed_sets(client: TestClient, db_session: Session) -> None:
+    owner = get_auth_headers(client, nickname="progress-owner")
+    other = get_auth_headers(client, nickname="progress-other")
+    exercise = create_exercise(db_session, "Progress Bench")
+    for headers, completed in ((owner, True), (owner, False), (other, True)):
+        workout = client.post("/workouts", headers=headers).json()
+        item = client.post(
+            f"/workouts/{workout['id']}/exercises",
+            json={"exercise_id": exercise.id}, headers=headers,
+        ).json()
+        for done in (True, False):
+            result = client.post(
+                f"/workouts/{workout['id']}/exercises/{item['id']}/sets",
+                json={"weight_kg": "60", "repetitions": 10}, headers=headers,
+            ).json()
+            if done:
+                client.patch(
+                    f"/workouts/{workout['id']}/exercises/{item['id']}/sets/{result['id']}",
+                    json={"is_completed": True}, headers=headers,
+                )
+        if completed:
+            client.post(f"/workouts/{workout['id']}/complete", headers=headers)
+    response = client.get("/workouts/progress", headers=owner)
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["exercise_id"] == exercise.id
+    assert response.json()[0]["weight_kg"] == "60.00"
+
+
+def test_update_time_crosses_midnight(client: TestClient) -> None:
+    headers = get_auth_headers(client)
+    workout = client.post("/workouts", headers=headers).json()
+    client.post(f"/workouts/{workout['id']}/complete", headers=headers)
+    started = datetime.now(timezone.utc) - timedelta(days=2)
+    started = started.replace(hour=23, minute=30, second=0, microsecond=0)
+    response = client.patch(
+        f"/workouts/{workout['id']}/time",
+        json={"started_at": started.isoformat(), "duration_minutes": 90},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert parse_utc_datetime(response.json()["finished_at"]) == started + timedelta(minutes=90)

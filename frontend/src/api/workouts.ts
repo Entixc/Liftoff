@@ -38,8 +38,24 @@ export type UpdateWorkoutSetPayload = {
 
 export type UpdateWorkoutTimePayload = {
   started_at: string;
-  finished_at: string;
+  duration_minutes: number;
 };
+
+export type ProgressSet = {
+  workout_id: number;
+  started_at: string;
+  exercise_id: number;
+  weight_kg: string | null;
+  repetitions: number;
+};
+
+export async function getWorkoutProgress(token: string): Promise<ProgressSet[]> {
+  const response = await fetch(`${API_URL}/workouts/progress`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Не удалось загрузить прогресс");
+  return response.json() as Promise<ProgressSet[]>;
+}
 
 export async function getActiveWorkout(token: string): Promise<Workout | null> {
   const response = await fetch(`${API_URL}/workouts/active`, {

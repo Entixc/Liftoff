@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
-import { getMyProfile, type TokenResponse, type UserProfile } from "./api/auth";
+import {
+  getBodyWeightHistory,
+  getMyProfile,
+  type BodyWeightEntry,
+  type TokenResponse,
+  type UserProfile,
+} from "./api/auth";
 import { getExercises, type Exercise } from "./api/exercises";
 import { getRoutines, startRoutine, type Routine } from "./api/routines";
 import {
   getActiveWorkout,
   getWorkoutExercises,
   getWorkoutHistory,
+  getWorkoutProgress,
   startWorkout,
+  type ProgressSet,
   type Workout,
 } from "./api/workouts";
 import { errorMessage } from "./api/http";
@@ -19,6 +27,8 @@ import { Routines } from "./components/Routines";
 import { ProfileForm } from "./components/ProfileForm";
 import { WorkoutHistory } from "./components/WorkoutHistory";
 import { WorkoutHistoryDetails } from "./components/WorkoutHistoryDetails";
+import { ProgressAnalytics } from "./components/ProgressAnalytics";
+import { BodyWeightTrend } from "./components/BodyWeightTrend";
 import {
   Badge,
   Button,
@@ -151,6 +161,10 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [active, setActive] = useState<Workout | null>(null);
   const [history, setHistory] = useState<Workout[]>([]);
+  const [progress, setProgress] = useState<ProgressSet[]>([]);
+  const [bodyWeightHistory, setBodyWeightHistory] = useState<BodyWeightEntry[]>(
+    [],
+  );
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,17 +183,31 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
       getExercises(),
       getActiveWorkout(token),
       getWorkoutHistory(token),
+      getWorkoutProgress(token),
+      getBodyWeightHistory(token),
       getRoutines(token),
     ])
-      .then(([user, catalog, workout, records, savedRoutines]) => {
-        if (!cancelled) {
-          setProfile(user);
-          setExercises(catalog);
-          setActive(workout);
-          setHistory(records);
-          setRoutines(savedRoutines);
-        }
-      })
+      .then(
+        ([
+          user,
+          catalog,
+          workout,
+          records,
+          progressSets,
+          weightEntries,
+          savedRoutines,
+        ]) => {
+          if (!cancelled) {
+            setProfile(user);
+            setExercises(catalog);
+            setActive(workout);
+            setHistory(records);
+            setProgress(progressSets);
+            setBodyWeightHistory(weightEntries);
+            setRoutines(savedRoutines);
+          }
+        },
+      )
       .catch((e) => {
         if (!cancelled)
           setError(
@@ -239,6 +267,9 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
           b.id - a.id,
       ),
     );
+    void getWorkoutProgress(token)
+      .then(setProgress)
+      .catch(() => {});
   }
   function updateRoutine(routine: Routine) {
     setRoutines((current) => [
@@ -428,6 +459,12 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               </a>
             </div>
           </div>
+          <ProgressAnalytics
+            history={history}
+            sets={progress}
+            exercises={exercises}
+          />
+          <BodyWeightTrend entries={bodyWeightHistory} />
           <div className="quick-actions">
             <a href="#/workout">
               <Icon name="workout" />
@@ -483,7 +520,10 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               workout={selectedWorkout}
               exercises={exercises}
               token={token}
-              onClose={() => navigate("history")}
+              onClose={() => {
+                navigate("history");
+                setReload((value) => value + 1);
+              }}
               onWorkoutUpdated={updateHistory}
               onRoutineSaved={updateRoutine}
             />
@@ -508,6 +548,11 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
                 onStart={() => navigate("workout")}
               />
             </Panel>
+            <ProgressAnalytics
+              history={history}
+              sets={progress}
+              exercises={exercises}
+            />
           </>
         ))}
       {page === "routines" && (
@@ -566,7 +611,12 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
               <ProfileForm
                 profile={profile}
                 token={token}
-                onProfileUpdated={setProfile}
+                onProfileUpdated={(updated) => {
+                  setProfile(updated);
+                  void getBodyWeightHistory(token)
+                    .then(setBodyWeightHistory)
+                    .catch(() => {});
+                }}
               />
               <Panel>
                 <div className="section-heading">

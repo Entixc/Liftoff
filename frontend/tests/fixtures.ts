@@ -57,6 +57,9 @@ export async function mockAPI(page: Page, authenticated = true) {
       status: "completed",
     },
   ];
+  const weightEntries = [
+    { id: 1, weight_kg: "75.50", recorded_at: "2026-10-18T10:00:00Z" },
+  ];
   let active: Workout | null = null;
   const items: WorkoutExercise[] = [
     { id: 1, workout_id: 1, exercise_id: 1, position: 1 },
@@ -110,8 +113,21 @@ export async function mockAPI(page: Page, authenticated = true) {
       if (body.nickname === "taken") return respond({}, 409);
       return respond({ ...profile, nickname: body.nickname }, 201);
     }
+    if (path === "/auth/me/weight-history") return respond(weightEntries);
     if (path === "/auth/me") {
-      if (method === "PATCH") Object.assign(profile, body);
+      if (method === "PATCH") {
+        if (
+          body.body_weight_kg !== null &&
+          body.body_weight_kg !== undefined &&
+          Number(body.body_weight_kg) !== Number(profile.body_weight_kg)
+        )
+          weightEntries.push({
+            id: weightEntries.length + 1,
+            weight_kg: Number(body.body_weight_kg).toFixed(2),
+            recorded_at: new Date().toISOString(),
+          });
+        Object.assign(profile, body);
+      }
       return respond(profile);
     }
     if (path === "/exercises") return respond(exercises);
@@ -233,6 +249,30 @@ export async function mockAPI(page: Page, authenticated = true) {
     if (path === "/workouts/active")
       return respond(active ?? {}, active ? 200 : 404);
     if (path === "/workouts/history") return respond(history);
+    if (path === "/workouts/progress")
+      return respond(
+        sets
+          .filter((item) => item.is_completed)
+          .flatMap((item) => {
+            const exercise = items.find(
+              (entry) => entry.id === item.workout_exercise_id,
+            );
+            const workout = history.find(
+              (entry) => entry.id === exercise?.workout_id,
+            );
+            return exercise && workout
+              ? [
+                  {
+                    workout_id: workout.id,
+                    started_at: workout.started_at,
+                    exercise_id: exercise.exercise_id,
+                    weight_kg: item.weight_kg,
+                    repetitions: item.repetitions,
+                  },
+                ]
+              : [];
+          }),
+      );
     if (path === "/workouts" && method === "POST") {
       active = {
         id: 4,
@@ -273,7 +313,10 @@ export async function mockAPI(page: Page, authenticated = true) {
     const time = path.match(/^\/workouts\/(\d+)\/time$/);
     if (time) {
       const workout = history.find((item) => item.id === Number(time[1]))!;
-      Object.assign(workout, body);
+      workout.started_at = body.started_at;
+      workout.finished_at = new Date(
+        Date.parse(body.started_at) + body.duration_minutes * 60000,
+      ).toISOString();
       return respond(workout);
     }
     const set = path.match(

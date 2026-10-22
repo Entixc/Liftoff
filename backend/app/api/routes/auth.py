@@ -1,4 +1,5 @@
 from typing import Annotated
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -9,12 +10,14 @@ from app.api.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
+from app.models.body_weight_entry import BodyWeightEntry
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
     UpdateProfileRequest,
     UserResponse,
+    BodyWeightEntryResponse,
 )
 
 router = APIRouter(
@@ -31,6 +34,18 @@ def get_my_profile(current_user: CurrentUser) -> User:
     return current_user
 
 
+@router.get("/me/weight-history", response_model=list[BodyWeightEntryResponse])
+def get_body_weight_history(
+    current_user: CurrentUser,
+    db: DatabaseSession,
+) -> list[BodyWeightEntry]:
+    return list(db.scalars(
+        select(BodyWeightEntry)
+        .where(BodyWeightEntry.user_id == current_user.id)
+        .order_by(BodyWeightEntry.recorded_at, BodyWeightEntry.id)
+    ).all())
+
+
 @router.patch("/me", response_model=UserResponse)
 def update_my_profile(
     request: UpdateProfileRequest,
@@ -43,8 +58,20 @@ def update_my_profile(
             detail="At least one profile field must be provided",
         )
 
+    weight_changed = (
+        "body_weight_kg" in request.model_fields_set
+        and request.body_weight_kg is not None
+        and request.body_weight_kg != current_user.body_weight_kg
+    )
     for field_name in request.model_fields_set:
         setattr(current_user, field_name, getattr(request, field_name))
+
+    if weight_changed:
+        db.add(BodyWeightEntry(
+            user_id=current_user.id,
+            weight_kg=request.body_weight_kg,
+            recorded_at=datetime.now(timezone.utc),
+        ))
 
     db.commit()
     db.refresh(current_user)

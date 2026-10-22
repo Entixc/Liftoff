@@ -1974,6 +1974,33 @@ input:focus-visible {
   }
 }
 
+.progress-panel { margin: 24px 0; }
+.progress-panel h2 { margin-bottom: 18px; }
+.progress-counts, .progress-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.progress-records { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.progress-counts > div, .progress-records > div { display: flex; flex-direction: column; gap: 5px; padding: 16px; border: 1px solid var(--border, #344139); border-radius: 12px; }
+.progress-counts strong { font-size: 28px; }
+.progress-counts span, .progress-records span { color: var(--text-muted, #a9b2ac); font-size: 13px; }
+.progress-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+.progress-controls label { display: flex; flex-direction: column; gap: 6px; min-width: 180px; flex: 1; }
+.progress-controls select { min-height: 40px; padding: 8px; color: inherit; background: #202923; border: 1px solid #526052; border-radius: 8px; }
+.progress-chart { margin: 20px 0; }
+.body-weight-panel { margin: 24px 0; }
+.trend { margin-top: 18px; }
+.trend-period { display: inline-flex; align-items: center; gap: 10px; color: #dce9d8; font-size: 14px; }
+.trend-period select { color: #f1faeb; background: #263c30; border: 1px solid #658c68; border-radius: 8px; padding: 8px 12px; min-height: 40px; }
+.trend-plot { margin-top: 14px; background: linear-gradient(180deg, #263c30, #1a2b22); border: 1px solid #638765; border-radius: 12px; overflow: hidden; }
+.trend-plot svg { display: block; width: 100%; height: 210px; color: #b5ff8d; }
+.trend-grid { stroke: #57715a; stroke-width: 0.4; stroke-dasharray: 1 1; }
+.trend-line { fill: none; stroke: #b5ff8d; stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.trend-dot { fill: #e3ffd1; stroke: #52884c; stroke-width: 0.7; }
+.trend-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #c7d7c1; font-size: 13px; margin-top: 8px; }
+.trend-caption strong { color: #d7ffc0; font-size: 15px; }
+.trend-empty { margin: 22px 0 6px; }
+.progress-panel details { margin-top: 16px; }
+.progress-panel summary { cursor: pointer; }
+@media (max-width: 600px) { .progress-records { grid-template-columns: 1fr; } }
+
 .session-actions {
   display: flex;
   align-items: center;

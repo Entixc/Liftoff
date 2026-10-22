@@ -17,7 +17,15 @@ class WorkoutResponse(BaseModel):
 
 class UpdateWorkoutTimeRequest(BaseModel):
     started_at: AwareDatetime
-    finished_at: AwareDatetime
+    duration_minutes: Annotated[int, Field(ge=1, le=1440)]
+
+
+class ProgressSetResponse(BaseModel):
+    workout_id: int
+    started_at: datetime
+    exercise_id: int
+    weight_kg: Decimal | None
+    repetitions: int
 
 
 class AddWorkoutExerciseRequest(BaseModel):

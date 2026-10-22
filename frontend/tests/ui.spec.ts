@@ -269,12 +269,13 @@ test("full workout: create, edit, completion, history and time", async ({
     .getByRole("button", { name: "Редактировать", exact: true })
     .click();
   await page.getByLabel("Начало", { exact: true }).fill("2026-10-10T10:00");
-  await page.getByLabel("Окончание", { exact: true }).fill("2026-10-10T09:00");
+  await page.getByLabel("Часы", { exact: true }).fill("0");
+  await page.getByLabel("Минуты", { exact: true }).fill("0");
   await page.getByRole("button", { name: "Сохранить время" }).click();
   await expect(page.getByRole("alert")).toContainText(
-    "Начало должно быть раньше",
+    "Длительность должна быть",
   );
-  await page.getByLabel("Окончание", { exact: true }).fill("2026-10-10T11:00");
+  await page.getByLabel("Часы", { exact: true }).fill("1");
   await page.getByRole("button", { name: "Сохранить время" }).click();
   await expect(page.getByText("Время тренировки обновлено")).toBeVisible();
   expect(
@@ -283,6 +284,44 @@ test("full workout: create, edit, completion, history and time", async ({
   ).toBe(3600000);
   await page.getByRole("button", { name: "Готово", exact: true }).click();
   await expect(page.locator(".read-set")).toBeVisible();
+});
+
+test("progress appears on home and history with volume and records", async ({
+  page,
+}) => {
+  await mockAPI(page);
+  await page.goto("/");
+  await expect(page.locator(".progress-panel")).toContainText("Прогресс");
+  await expect(page.locator(".progress-panel")).toContainText("600 кг");
+  await expect(page.locator(".progress-panel")).toContainText("60 кг");
+  await page.goto("/#/history");
+  await expect(page.locator(".progress-panel")).toContainText("600 кг");
+  await page.locator(".progress-panel select").nth(1).selectOption("reps");
+  await expect(page.locator(".progress-chart .trend-plot")).toHaveAttribute(
+    "aria-label",
+    /10/,
+  );
+});
+
+test("body weight graph updates from profile and filters periods", async ({
+  page,
+}) => {
+  await mockAPI(page);
+  await page.goto("/");
+  await expect(page.locator(".body-weight-panel .trend-plot")).toHaveAttribute(
+    "aria-label",
+    /75.5 кг/,
+  );
+  await page.locator(".body-weight-panel select").selectOption("week");
+  await expect(page.locator(".body-weight-panel .trend-empty")).toBeVisible();
+  await page.goto("/#/profile");
+  await page.getByLabel("Вес, кг").fill("74.25");
+  await page.getByRole("button", { name: "Сохранить изменения" }).click();
+  await page.goto("/#/home");
+  await expect(page.locator(".body-weight-panel .trend-plot")).toHaveAttribute(
+    "aria-label",
+    /74.25 кг/,
+  );
 });
 
 test("swipe deletes only selected set, cancel is safe, fallback supports keyboard", async ({

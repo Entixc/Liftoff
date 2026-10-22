@@ -19,6 +19,12 @@ function localInput(value: string | null) {
     .toISOString()
     .slice(0, 19);
 }
+function durationParts(workout: Workout) {
+  const minutes = workout.finished_at
+    ? Math.max(1, Math.round((Date.parse(workout.finished_at) - Date.parse(workout.started_at)) / 60000))
+    : 1;
+  return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
+}
 export function WorkoutHistoryDetails({
   exercises,
   token,
@@ -36,7 +42,7 @@ export function WorkoutHistoryDetails({
 }) {
   const [editing, setEditing] = useState(false);
   const [start, setStart] = useState(() => localInput(workout.started_at));
-  const [finish, setFinish] = useState(() => localInput(workout.finished_at));
+  const [duration, setDuration] = useState(() => durationParts(workout));
   const [saving, setSaving] = useState(false);
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -83,20 +89,17 @@ export function WorkoutHistoryDetails({
   }
   async function saveTime(event: FormEvent) {
     event.preventDefault();
-    const started = new Date(start),
-      finished = new Date(finish);
-    if (
-      !Number.isFinite(started.getTime()) ||
-      !Number.isFinite(finished.getTime())
-    ) {
-      setError("Укажи обе даты.");
+    const started = new Date(start);
+    const durationMinutes = duration.hours * 60 + duration.minutes;
+    if (!Number.isFinite(started.getTime())) {
+      setError("Укажи дату и время начала.");
       return;
     }
-    if (started >= finished) {
-      setError("Начало должно быть раньше окончания.");
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440) {
+      setError("Длительность должна быть от 1 минуты до 24 часов.");
       return;
     }
-    if (finished.getTime() > Date.now()) {
+    if (started.getTime() + durationMinutes * 60000 > Date.now()) {
       setError("Окончание не может находиться в будущем.");
       return;
     }
@@ -105,11 +108,11 @@ export function WorkoutHistoryDetails({
     try {
       const updated = await updateWorkoutTime(token, workout.id, {
         started_at: started.toISOString(),
-        finished_at: finished.toISOString(),
+        duration_minutes: durationMinutes,
       });
       onWorkoutUpdated(updated);
       setStart(localInput(updated.started_at));
-      setFinish(localInput(updated.finished_at));
+      setDuration(durationParts(updated));
       notify("Время тренировки обновлено");
     } catch (e) {
       setError(errorMessage(e, "Не удалось сохранить время тренировки."));
@@ -144,7 +147,7 @@ export function WorkoutHistoryDetails({
             setEditing(!editing);
             setError(null);
             setStart(localInput(workout.started_at));
-            setFinish(localInput(workout.finished_at));
+            setDuration(durationParts(workout));
           }}
         >
           <Icon name={editing ? "check" : "edit"} />
@@ -205,7 +208,7 @@ export function WorkoutHistoryDetails({
             <Icon name="clock" />
           </div>
           <p className="muted">
-            Время указано в часовом поясе твоего устройства.
+            Укажи начало и длительность. Окончание посчитается автоматически, даже если тренировка закончилась на следующий день.
           </p>
           <form className="history-time-form" onSubmit={saveTime}>
             <Input
@@ -218,13 +221,24 @@ export function WorkoutHistoryDetails({
               onChange={(e) => setStart(e.target.value)}
             />
             <Input
-              label="Окончание"
-              type="datetime-local"
-              step="1"
+              label="Часы"
+              type="number"
+              min="0"
+              max="24"
               required
-              value={finish}
+              value={duration.hours}
               disabled={saving}
-              onChange={(e) => setFinish(e.target.value)}
+              onChange={(e) => setDuration((value) => ({ ...value, hours: Number(e.target.value) }))}
+            />
+            <Input
+              label="Минуты"
+              type="number"
+              min="0"
+              max="59"
+              required
+              value={duration.minutes}
+              disabled={saving}
+              onChange={(e) => setDuration((value) => ({ ...value, minutes: Number(e.target.value) }))}
             />
             <Button type="submit" disabled={saving}>
               {saving ? "Сохраняем…" : "Сохранить время"}

@@ -29,6 +29,22 @@ export type UpdateProfilePayload = {
   body_weight_kg?: number | null;
 };
 
+export type BodyWeightEntry = {
+  id: number;
+  weight_kg: string;
+  recorded_at: string;
+};
+
+export async function getBodyWeightHistory(
+  token: string,
+): Promise<BodyWeightEntry[]> {
+  const response = await fetch(`${API_URL}/auth/me/weight-history`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new ApiError(response.status);
+  return response.json() as Promise<BodyWeightEntry[]>;
+}
+
 export async function login(payload: LoginPayload): Promise<TokenResponse> {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
