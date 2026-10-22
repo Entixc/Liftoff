@@ -76,6 +76,7 @@ export async function mockAPI(page: Page, authenticated = true) {
   ];
   const routines: Routine[] = [];
   const state = {
+    sessionAuthenticated: authenticated,
     unauthorized: false,
     offline: false,
     failDelete: false,
@@ -88,10 +89,6 @@ export async function mockAPI(page: Page, authenticated = true) {
   let itemId = 2,
     setId = 2,
     routineId = 1;
-  if (authenticated)
-    await page.addInitScript(() =>
-      localStorage.setItem("access_token", "ui-test-token"),
-    );
   await page.route("**/mock-api/**", async (route) => {
     if (state.offline) {
       await route.abort("connectionrefused");
@@ -103,11 +100,16 @@ export async function mockAPI(page: Page, authenticated = true) {
     const body = request.postData() ? request.postDataJSON() : {};
     const respond = (json: unknown, status = 200) =>
       route.fulfill({ json, status });
-    if (state.unauthorized && request.headers().authorization)
+    if (state.unauthorized && !["/auth/login", "/auth/register"].includes(path))
       return respond({ detail: "Not authenticated" }, 401);
     if (path === "/auth/login") {
       if (body.password === "wrongpassword") return respond({}, 401);
-      return respond({ access_token: "ui-test-token", token_type: "bearer" });
+      state.sessionAuthenticated = true;
+      return respond({ authenticated: true });
+    }
+    if (path === "/auth/logout") {
+      state.sessionAuthenticated = false;
+      return route.fulfill({ status: 204, body: "" });
     }
     if (path === "/auth/register") {
       if (body.nickname === "taken") return respond({}, 409);
@@ -115,6 +117,8 @@ export async function mockAPI(page: Page, authenticated = true) {
     }
     if (path === "/auth/me/weight-history") return respond(weightEntries);
     if (path === "/auth/me") {
+      if (!state.sessionAuthenticated)
+        return respond({ detail: "Not authenticated" }, 401);
       if (method === "PATCH") {
         if (
           body.body_weight_kg !== null &&
@@ -142,14 +146,28 @@ export async function mockAPI(page: Page, authenticated = true) {
               ...exercise,
               description_en:
                 "Lower the weight with control, then press it up.",
-              muscles: [
-                {
-                  slug: "middle_chest",
-                  name_en: "Middle chest",
-                  role: "primary",
-                },
-                { slug: "triceps", name_en: "Triceps", role: "secondary" },
-              ],
+              muscles:
+                exercise.id === 2
+                  ? [
+                      {
+                        slug: "lats",
+                        name_en: "Latissimus dorsi",
+                        role: "primary",
+                      },
+                      { slug: "biceps", name_en: "Biceps", role: "secondary" },
+                    ]
+                  : [
+                      {
+                        slug: "middle_chest",
+                        name_en: "Middle chest",
+                        role: "primary",
+                      },
+                      {
+                        slug: "triceps",
+                        name_en: "Triceps",
+                        role: "secondary",
+                      },
+                    ],
             }
           : {},
         exercise ? 200 : 404,

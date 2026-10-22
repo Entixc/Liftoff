@@ -1,13 +1,15 @@
 from typing import Annotated
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
+from app.core.config import get_session_cookie_secure
+from app.core.sessions import SESSION_COOKIE_NAME, SESSION_ABSOLUTE_TIMEOUT, create_session, require_trusted_origin, revoke_session
 from app.db.session import get_db
 from app.models.user import User
 from app.models.body_weight_entry import BodyWeightEntry
@@ -15,6 +17,7 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    SessionLoginResponse,
     UpdateProfileRequest,
     UserResponse,
     BodyWeightEntryResponse,
@@ -112,8 +115,8 @@ def register_user(request: RegisterRequest, db: DatabaseSession) -> User:
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
-def login_user(request: LoginRequest, db: DatabaseSession) -> TokenResponse:
+@router.post("/login", response_model=TokenResponse | SessionLoginResponse)
+def login_user(request: LoginRequest, http_request: Request, response: Response, db: DatabaseSession) -> TokenResponse | SessionLoginResponse:
     user = db.scalar(select(User).where(User.nickname == request.nickname))
 
     if user is None or not verify_password(request.password, user.password_hash):
@@ -123,4 +126,27 @@ def login_user(request: LoginRequest, db: DatabaseSession) -> TokenResponse:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if http_request.headers.get("x-session-client") == "browser":
+        require_trusted_origin(http_request)
+        session_token = create_session(db, user.id)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=session_token,
+            max_age=int(SESSION_ABSOLUTE_TIMEOUT.total_seconds()),
+            httponly=True,
+            secure=get_session_cookie_secure(),
+            samesite="lax",
+            path="/",
+        )
+        return SessionLoginResponse()
+    # Temporary compatibility until the browser client no longer uses Bearer JWT.
     return TokenResponse(access_token=create_access_token(user.id))
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout_user(request: Request, response: Response, db: DatabaseSession) -> None:
+    require_trusted_origin(request)
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token:
+        revoke_session(db, token)
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/")

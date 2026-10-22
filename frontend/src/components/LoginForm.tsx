@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { login, type TokenResponse } from "../api/auth";
+import { login } from "../api/auth";
 import { ApiError, errorMessage } from "../api/http";
 import { Button, Icon, Input, PasswordInput } from "./ui";
 
@@ -8,7 +8,7 @@ export function LoginForm({
   onShowRegistration,
   initialNickname = "",
 }: {
-  onLogin: (response: TokenResponse) => void;
+  onLogin: () => void;
   onShowRegistration: () => void;
   initialNickname?: string;
 }) {
@@ -21,7 +21,8 @@ export function LoginForm({
     setError(null);
     setBusy(true);
     try {
-      onLogin(await login({ nickname, password }));
+      await login({ nickname, password });
+      onLogin();
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 401

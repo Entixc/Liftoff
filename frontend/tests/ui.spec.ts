@@ -225,6 +225,23 @@ test("registration, password toggle, login failure and success", async ({
   await expect(
     page.getByRole("heading", { name: "Привет, nurzhan." }),
   ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Привет, nurzhan." }),
+  ).toBeVisible();
+  await page.goto("/#/profile");
+  await page.getByRole("button", { name: "Выйти", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Выйти", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Войти", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Войти", exact: true }),
+  ).toBeVisible();
 });
 
 test("full workout: create, edit, completion, history and time", async ({
@@ -320,6 +337,22 @@ test("exercise page shows muscles, instructions and history", async ({
   );
   await expect(page.locator(".exercise-muscle-lists")).toContainText("Triceps");
   await expect(page.locator(".muscle-body-view")).toHaveCount(2);
+  const primary = page.locator(
+    '.body-muscle[data-muscle="middle_chest"][data-role="primary"]',
+  );
+  const secondary = page.locator(
+    '.body-muscle[data-muscle="triceps"][data-role="secondary"]',
+  );
+  await expect(primary).toHaveCount(2);
+  await expect(secondary).toHaveCount(4);
+  expect(
+    await primary.first().evaluate((element) => getComputedStyle(element).fill),
+  ).toBe("rgb(159, 241, 109)");
+  expect(
+    await secondary
+      .first()
+      .evaluate((element) => getComputedStyle(element).fill),
+  ).toBe("rgb(103, 183, 215)");
   await expect(page.locator(".exercise-instructions")).toContainText(
     "Lower the weight",
   );
@@ -335,6 +368,30 @@ test("exercise page shows muscles, instructions and history", async ({
   await expect(page.locator(".exercise-details h1")).toHaveText(
     "Barbell Bench Press",
   );
+});
+
+test("back muscles use exercise-specific primary and secondary colors", async ({
+  page,
+}, testInfo) => {
+  await mockAPI(page);
+  await page.goto("/#/catalog/2");
+  await expect(page.locator(".exercise-details h1")).toHaveText("Pull-Ups");
+  await expect(
+    page
+      .locator(".muscle-body-view")
+      .nth(1)
+      .locator('[data-muscle="lats"][data-role="primary"]'),
+  ).toHaveCount(2);
+  await expect(
+    page.locator('[data-muscle="biceps"][data-role="secondary"]'),
+  ).toHaveCount(2);
+  await expect(
+    page.locator('[data-muscle="middle_chest"][data-role="idle"]'),
+  ).toHaveCount(2);
+  await page.screenshot({
+    path: testInfo.outputPath("pull-ups-muscles.png"),
+    fullPage: true,
+  });
 });
 
 test("body weight graph updates from profile and filters periods", async ({
@@ -456,16 +513,16 @@ test("swipe deletes only selected set, cancel is safe, fallback supports keyboar
   await expect(page.locator(".workout-exercise-card")).toHaveCount(0);
 });
 
-test("network retry keeps token, authenticated 401 returns to login", async ({
+test("network retry keeps session, authenticated 401 returns to login", async ({
   page,
 }) => {
   const state = await mockAPI(page);
   state.offline = true;
   await page.goto("/");
   await expect(page.getByRole("alert")).toContainText("Нет связи с сервером");
-  expect(await page.evaluate(() => localStorage.getItem("access_token"))).toBe(
-    "ui-test-token",
-  );
+  expect(
+    await page.evaluate(() => localStorage.getItem("access_token")),
+  ).toBeNull();
   state.offline = false;
   await page.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(

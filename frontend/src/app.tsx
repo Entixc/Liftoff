@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import {
   getBodyWeightHistory,
   getMyProfile,
+  logoutSession,
+  restoreSession,
   type BodyWeightEntry,
-  type TokenResponse,
   type UserProfile,
 } from "./api/auth";
 import { getExercises, type Exercise } from "./api/exercises";
@@ -17,7 +18,7 @@ import {
   type ProgressSet,
   type Workout,
 } from "./api/workouts";
-import { errorMessage } from "./api/http";
+import { ApiError, errorMessage } from "./api/http";
 import { AppShell, Brand, pages, type Page } from "./components/AppShell";
 import { ActiveWorkout, WorkoutTimer } from "./components/ActiveWorkout";
 import { ExerciseCatalog } from "./components/ExerciseCatalog";
@@ -68,7 +69,7 @@ function AuthScreen({
   onLogin,
   message,
 }: {
-  onLogin: (response: TokenResponse) => void;
+  onLogin: () => void;
   message: string | null;
 }) {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -653,47 +654,49 @@ function SessionApp({ token, logout }: { token: string; logout: () => void }) {
   );
 }
 function AppContent() {
-  const [token, setToken] = useState(() =>
-    localStorage.getItem("access_token"),
-  );
+  const [token, setToken] = useState<"checking" | "session" | null>("checking");
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
-    function expired(event: Event) {
-      if ((event as CustomEvent<string>).detail !== token) return;
-      localStorage.removeItem("access_token");
+    localStorage.removeItem("access_token");
+    void restoreSession()
+      .then((authenticated) => setToken(authenticated ? "session" : null))
+      .catch((error: unknown) => {
+        setToken(
+          error instanceof ApiError && error.status === 401 ? null : "session",
+        );
+      });
+    function expired() {
       setToken(null);
       setMessage("Сессия истекла. Войди снова — тренировки сохранены.");
     }
-    function sync(event: StorageEvent) {
-      if (event.key === "access_token") {
-        setToken(event.newValue);
-        setMessage(null);
-      }
-    }
     window.addEventListener("session-expired", expired);
-    window.addEventListener("storage", sync);
     return () => {
       window.removeEventListener("session-expired", expired);
-      window.removeEventListener("storage", sync);
     };
-  }, [token]);
-  return token ? (
+  }, []);
+  return token === "checking" ? (
+    <LoadingState />
+  ) : token ? (
     <SessionApp
       key={token}
       token={token}
       logout={() => {
-        localStorage.removeItem("access_token");
-        setToken(null);
-        setMessage(null);
-        navigate("home");
+        void logoutSession()
+          .then(() => {
+            setToken(null);
+            setMessage(null);
+            navigate("home");
+          })
+          .catch(() =>
+            window.alert("Не удалось завершить сессию. Попробуй ещё раз."),
+          );
       }}
     />
   ) : (
     <AuthScreen
       message={message}
-      onLogin={(response) => {
-        localStorage.setItem("access_token", response.access_token);
-        setToken(response.access_token);
+      onLogin={() => {
+        setToken("session");
         setMessage(null);
       }}
     />

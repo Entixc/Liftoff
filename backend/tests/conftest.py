@@ -13,6 +13,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-with-at-least-32-bytes"
 from app.app import app
 from app.db.base import Base
 from app.db.session import get_db
+from app.models.user_session import UserSession
 
 
 test_engine = create_engine(

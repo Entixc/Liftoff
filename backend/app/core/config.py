@@ -29,3 +29,10 @@ def get_cors_origins() -> list[str]:
     if not origins:
         raise RuntimeError("CORS_ORIGINS must contain at least one origin")
     return origins
+
+
+def get_session_cookie_secure() -> bool:
+    value = os.getenv("SESSION_COOKIE_SECURE", "false").strip().lower()
+    if value not in {"true", "false"}:
+        raise RuntimeError("SESSION_COOKIE_SECURE must be true or false")
+    return value == "true"

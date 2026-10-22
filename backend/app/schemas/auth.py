@@ -20,6 +20,10 @@ class TokenResponse(BaseModel):
     token_type: Literal["bearer"] = "bearer"
 
 
+class SessionLoginResponse(BaseModel):
+    authenticated: Literal[True] = True
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

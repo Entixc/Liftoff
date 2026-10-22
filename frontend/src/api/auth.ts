@@ -11,11 +11,6 @@ export type RegisterPayload = {
   password: string;
 };
 
-export type TokenResponse = {
-  access_token: string;
-  token_type: "bearer";
-};
-
 export type UserProfile = {
   id: number;
   nickname: string;
@@ -45,11 +40,12 @@ export async function getBodyWeightHistory(
   return response.json() as Promise<BodyWeightEntry[]>;
 }
 
-export async function login(payload: LoginPayload): Promise<TokenResponse> {
+export async function login(payload: LoginPayload): Promise<void> {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Session-Client": "browser",
     },
     body: JSON.stringify(payload),
   });
@@ -57,8 +53,11 @@ export async function login(payload: LoginPayload): Promise<TokenResponse> {
   if (!response.ok) {
     throw new ApiError(response.status);
   }
+}
 
-  return response.json() as Promise<TokenResponse>;
+export async function logoutSession(): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/logout`, { method: "POST" });
+  if (!response.ok) throw new ApiError(response.status);
 }
 
 export async function register(payload: RegisterPayload): Promise<UserProfile> {
@@ -89,6 +88,16 @@ export async function getMyProfile(token: string): Promise<UserProfile> {
   }
 
   return response.json() as Promise<UserProfile>;
+}
+
+export async function restoreSession(): Promise<boolean> {
+  // A missing session is expected on the login screen; do not announce expiry.
+  const response = await globalThis.fetch(`${API_URL}/auth/me`, {
+    credentials: "include",
+  });
+  if (response.status === 401) return false;
+  if (!response.ok) throw new ApiError(response.status);
+  return true;
 }
 
 export async function updateMyProfile(

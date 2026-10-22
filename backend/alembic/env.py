@@ -18,6 +18,7 @@ from app.models.routine_set import RoutineSet
 from app.models.body_weight_entry import BodyWeightEntry
 from app.models.muscle import Muscle
 from app.models.exercise_muscle import ExerciseMuscle
+from app.models.user_session import UserSession
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
