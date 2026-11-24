@@ -101,3 +101,9 @@ def clear_login_failures(
         )
     )
     db.commit()
+
+
+def clear_nickname_login_failures(db: Session, identifier: str) -> None:
+    db.execute(
+        delete(LoginAttempt).where(LoginAttempt.nickname_key == identifier)
+    )

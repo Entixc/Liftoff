@@ -34,6 +34,8 @@ import { BodyWeightTrend } from "./components/BodyWeightTrend";
 import { ChangePasswordForm } from "./components/ChangePasswordForm";
 import { EmailVerificationPanel } from "./components/EmailVerificationPanel";
 import { EmailVerificationScreen } from "./components/EmailVerificationScreen";
+import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
+import { PasswordResetScreen } from "./components/PasswordResetScreen";
 import {
   Badge,
   Button,
@@ -83,6 +85,21 @@ function useEmailVerificationToken() {
   }, []);
   return token;
 }
+
+function usePasswordResetToken() {
+  const read = () => {
+    const [path, query = ""] = window.location.hash.split("?", 2);
+    if (path !== "#/reset-password") return null;
+    return new URLSearchParams(query).get("token") ?? "";
+  };
+  const [token, setToken] = useState<string | null>(read);
+  useEffect(() => {
+    const update = () => setToken(read());
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return token;
+}
 function AuthScreen({
   onLogin,
   message,
@@ -90,7 +107,7 @@ function AuthScreen({
   onLogin: () => void;
   message: string | null;
 }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [nickname, setNickname] = useState("");
   const [registered, setRegistered] = useState(false);
   return (
@@ -161,8 +178,9 @@ function AuthScreen({
               initialNickname={nickname}
               onLogin={onLogin}
               onShowRegistration={() => setMode("register")}
+              onForgotPassword={() => setMode("forgot")}
             />
-          ) : (
+          ) : mode === "register" ? (
             <RegisterForm
               onShowLogin={() => setMode("login")}
               onRegistered={(name) => {
@@ -171,6 +189,8 @@ function AuthScreen({
                 setMode("login");
               }}
             />
+          ) : (
+            <ForgotPasswordForm onBack={() => setMode("login")} />
           )}
           <p className="auth-footnote">Меньше отвлечений. Больше движения.</p>
         </div>
@@ -672,6 +692,7 @@ function SessionApp({ logout }: { logout: () => void }) {
 }
 function AppContent() {
   const verificationToken = useEmailVerificationToken();
+  const passwordResetToken = usePasswordResetToken();
   const [session, setSession] = useState<
     "checking" | "authenticated" | null
   >("checking");
@@ -702,6 +723,16 @@ function AppContent() {
     return (
       <EmailVerificationScreen
         token={verificationToken}
+        onContinue={() => {
+          window.location.hash = "/home";
+        }}
+      />
+    );
+  }
+  if (passwordResetToken !== null) {
+    return (
+      <PasswordResetScreen
+        token={passwordResetToken}
         onContinue={() => {
           window.location.hash = "/home";
         }}

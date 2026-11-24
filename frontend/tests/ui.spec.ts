@@ -293,6 +293,41 @@ test("email verification link confirms the address", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("forgotten password can be reset with a one-time link", async ({
+  page,
+}) => {
+  await mockAPI(page, false);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Забыли пароль?" }).click();
+  await page.getByLabel("Email", { exact: true }).fill("nurzhan@example.com");
+  await page.getByRole("button", { name: "Получить ссылку" }).click();
+  await expect(
+    page.getByText(/Если подтверждённый аккаунт.*ссылка создана/),
+  ).toBeVisible();
+
+  await page.goto(
+    "/#/reset-password?token=valid-password-reset-token-1234567890",
+  );
+  await page.getByLabel("Новый пароль", { exact: true }).fill("newstrongpass");
+  await page.getByLabel("Повтори новый пароль").fill("different");
+  await page.getByRole("button", { name: "Сохранить новый пароль" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Новые пароли не совпадают.",
+  );
+  await page.getByLabel("Повтори новый пароль").fill("newstrongpass");
+  await page.getByRole("button", { name: "Сохранить новый пароль" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Пароль изменён" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Перейти ко входу" }).click();
+  await page.getByLabel("Никнейм", { exact: true }).fill("nurzhan");
+  await page.getByLabel("Пароль", { exact: true }).fill("newstrongpass");
+  await page.getByRole("button", { name: "Войти", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Привет, nurzhan." }),
+  ).toBeVisible();
+});
+
 test("login throttling explains when the user must wait", async ({ page }) => {
   await mockAPI(page, false);
   await page.goto("/");

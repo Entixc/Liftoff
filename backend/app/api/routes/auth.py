@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.login_throttle import (
+    clear_nickname_login_failures,
     clear_login_failures,
     client_ip,
     login_retry_after,
@@ -21,7 +22,11 @@ from app.core.security import (
     verify_password,
 )
 from app.core.config import get_session_cookie_secure
-from app.core.email_delivery import send_email_verification
+from app.core.email_delivery import (
+    send_email_verification,
+    send_password_changed_notice,
+    send_password_reset,
+)
 from app.core.email_verification import (
     as_utc,
     get_email_verification_token,
@@ -36,6 +41,12 @@ from app.core.sessions import (
     revoke_other_user_sessions,
     revoke_session,
 )
+from app.core.password_reset import (
+    get_password_reset_token,
+    issue_password_reset_token,
+    password_reset_retry_after,
+    revoke_password_reset_tokens,
+)
 from app.db.session import get_db
 from app.models.user import User
 from app.models.body_weight_entry import BodyWeightEntry
@@ -48,6 +59,8 @@ from app.schemas.auth import (
     UserResponse,
     BodyWeightEntryResponse,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     VerifyEmailRequest,
 )
 
@@ -131,12 +144,15 @@ def change_my_password(
         )
 
     current_user.password_hash = hash_password(password_request.new_password)
+    revoke_password_reset_tokens(db, current_user.id)
     revoke_other_user_sessions(
         db,
         current_user.id,
         http_request.cookies.get(SESSION_COOKIE_NAME),
     )
     db.commit()
+    if current_user.email_verified_at is not None:
+        send_password_changed_notice(current_user.email)
 
 
 @router.post(
@@ -181,6 +197,60 @@ def register_user(request: RegisterRequest, db: DatabaseSession) -> User:
     db.refresh(user)
     send_email_verification(user.email, verification_token)
     return user
+
+
+@router.post(
+    "/password/forgot",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def forgot_password(request: ForgotPasswordRequest, db: DatabaseSession) -> None:
+    user = db.scalar(select(User).where(User.email == request.email))
+    # Keep an expensive password-hash operation in both account paths so the
+    # response time reveals less about whether an address is registered.
+    verify_password(str(request.email), DUMMY_PASSWORD_HASH)
+    if user is None or user.email_verified_at is None:
+        return
+    if password_reset_retry_after(db, user.id) is not None:
+        return
+
+    reset_token = issue_password_reset_token(db, user.id)
+    db.commit()
+    send_password_reset(user.email, reset_token)
+
+
+@router.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(request: ResetPasswordRequest, db: DatabaseSession) -> None:
+    token = get_password_reset_token(db, request.token)
+    now = datetime.now(timezone.utc)
+    if token is None or now >= as_utc(token.expires_at):
+        if token is not None:
+            db.delete(token)
+            db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token",
+        )
+
+    user = db.get(User, token.user_id)
+    if user is None:
+        db.delete(token)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token",
+        )
+    if verify_password(request.new_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must differ from current password",
+        )
+
+    user.password_hash = hash_password(request.new_password)
+    revoke_password_reset_tokens(db, user.id)
+    revoke_other_user_sessions(db, user.id, None)
+    clear_nickname_login_failures(db, nickname_key(user.nickname))
+    db.commit()
+    send_password_changed_notice(user.email)
 
 
 @router.post("/email/verify", status_code=status.HTTP_204_NO_CONTENT)

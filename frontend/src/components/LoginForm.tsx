@@ -6,10 +6,12 @@ import { Button, Icon, Input, PasswordInput } from "./ui";
 export function LoginForm({
   onLogin,
   onShowRegistration,
+  onForgotPassword,
   initialNickname = "",
 }: {
   onLogin: () => void;
   onShowRegistration: () => void;
+  onForgotPassword: () => void;
   initialNickname?: string;
 }) {
   const [nickname, setNickname] = useState(initialNickname);
@@ -75,6 +77,9 @@ export function LoginForm({
         {busy ? "Входим…" : "Войти"}
         <Icon name="arrow" />
       </Button>
+      <button type="button" className="text-button" onClick={onForgotPassword}>
+        Забыли пароль?
+      </button>
       <p className="auth-switch">
         Первый раз здесь?{" "}
         <button

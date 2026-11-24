@@ -135,6 +135,16 @@ export async function mockAPI(page: Page, authenticated = true) {
     }
     if (path === "/auth/me/email/verification" && method === "POST")
       return route.fulfill({ status: 202, body: "" });
+    if (path === "/auth/password/forgot" && method === "POST")
+      return route.fulfill({ status: 202, body: "" });
+    if (path === "/auth/password/reset" && method === "POST") {
+      if (body.token !== "valid-password-reset-token-1234567890")
+        return respond({ detail: "Invalid or expired password reset token" }, 400);
+      if (body.new_password === accountPassword) return respond({}, 400);
+      accountPassword = body.new_password;
+      state.sessionAuthenticated = false;
+      return route.fulfill({ status: 204, body: "" });
+    }
     if (path === "/auth/me/weight-history") return respond(weightEntries);
     if (path === "/auth/me/password" && method === "PATCH") {
       if (body.current_password !== accountPassword) return respond({}, 400);

@@ -7,10 +7,28 @@ from pydantic import ValidationError
 from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     UpdateProfileRequest,
     UserResponse,
 )
+
+
+def test_password_recovery_requests_validate_and_normalize() -> None:
+    forgot = ForgotPasswordRequest(email="Nurzhan@Example.COM")
+    reset = ResetPasswordRequest(
+        token="x" * 32,
+        new_password="newstrongpass",
+    )
+
+    assert forgot.email == "nurzhan@example.com"
+    assert reset.new_password == "newstrongpass"
+
+    with pytest.raises(ValidationError):
+        ForgotPasswordRequest(email="invalid")
+    with pytest.raises(ValidationError):
+        ResetPasswordRequest(token="short", new_password="newstrongpass")
 
 
 def test_change_password_request_accepts_valid_data() -> None:

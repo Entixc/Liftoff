@@ -1549,6 +1549,16 @@ input:focus-visible {
   color: var(--danger);
   background: rgba(229, 94, 94, 0.12);
 }
+
+.reset-password-form {
+  width: 100%;
+  text-align: left;
+}
+
+.reset-password-form h1,
+.reset-password-form p {
+  margin: 0;
+}
 .session-message {
   background: #3d3626;
   border-color: #746446;

@@ -21,6 +21,7 @@ from app.models.exercise_muscle import ExerciseMuscle
 from app.models.user_session import UserSession
 from app.models.login_attempt import LoginAttempt
 from app.models.email_verification_token import EmailVerificationToken
+from app.models.password_reset_token import PasswordResetToken
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

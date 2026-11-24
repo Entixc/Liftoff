@@ -48,6 +48,27 @@ export async function resendEmailVerification(): Promise<void> {
   if (!response.ok) throw new ApiError(response.status);
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/password/forgot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new ApiError(response.status);
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/password/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+  if (!response.ok) throw new ApiError(response.status);
+}
+
 export type BodyWeightEntry = {
   id: number;
   weight_kg: string;
