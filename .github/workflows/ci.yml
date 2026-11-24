@@ -31,8 +31,6 @@ jobs:
           --health-retries=10
 
     env:
-      DATABASE_URL: postgresql+psycopg://workout_tracker:ci_test_password@localhost:5432/workout_tracker
-      JWT_SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
       CORS_ORIGINS: http://localhost:5173
       SESSION_COOKIE_SECURE: "false"
       FRONTEND_URL: http://localhost:5173
@@ -54,10 +52,14 @@ jobs:
 
       - name: Apply Alembic migrations to PostgreSQL
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://workout_tracker:ci_test_password@localhost:5432/workout_tracker
         run: python -m alembic upgrade head
 
       - name: Seed exercise catalog (idempotency check)
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://workout_tracker:ci_test_password@localhost:5432/workout_tracker
         run: |
           python -m app.scripts.seed_exercises
           python -m app.scripts.seed_exercises
