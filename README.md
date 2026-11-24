@@ -128,6 +128,14 @@ Playwright самостоятельно запускает отдельный Vi
 
 Для единого форматирования React-кода: `npm run format`.
 
+## CI (GitHub Actions)
+
+Пайплайн описан в [.github/workflows/ci.yml](.github/workflows/ci.yml) и запускается на `push` и `pull_request` в `main`:
+
+- `backend`: поднимает `postgres:17-alpine`, применяет миграции Alembic, проверяет идемпотентность `seed_exercises` и запускает `pytest tests`.
+- `frontend`: проверяет типы/сборку (`npm run build`) и запускает браузерные тесты Playwright (`npm run test:ui`).
+- `docker`: проверяет сборку Docker-образов `backend` и `frontend` с кешированием Buildx.
+
 ### Как устроен frontend
 
 - `src/app.tsx` — сессия пользователя, загрузка общих данных и переключение экранов через URL после `#`.

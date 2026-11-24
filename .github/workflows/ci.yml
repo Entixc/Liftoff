@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Migrations, Seed, Pytest)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: workout_tracker
+          POSTGRES_USER: workout_tracker
+          POSTGRES_PASSWORD: ci_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U workout_tracker -d workout_tracker"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://workout_tracker:ci_test_password@localhost:5432/workout_tracker
+      JWT_SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
+      CORS_ORIGINS: http://localhost:5173
+      SESSION_COOKIE_SECURE: "false"
+      FRONTEND_URL: http://localhost:5173
+      EMAIL_DELIVERY_MODE: console
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install --upgrade pip && pip install -r backend/requirements.txt
+
+      - name: Apply Alembic migrations to PostgreSQL
+        working-directory: backend
+        run: python -m alembic upgrade head
+
+      - name: Seed exercise catalog (idempotency check)
+        working-directory: backend
+        run: |
+          python -m app.scripts.seed_exercises
+          python -m app.scripts.seed_exercises
+
+      - name: Run pytest suite
+        working-directory: backend
+        run: python -m pytest tests
+
+  frontend:
+    name: Frontend (Build & Playwright UI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck and build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright UI tests
+        working-directory: frontend
+        run: npm run test:ui
+
+  docker:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: liftoff-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: liftoff-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
